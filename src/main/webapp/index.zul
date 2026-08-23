@@ -1,0 +1,19 @@
+<?page title="Gerenciador de Notificações de Hospital"?>
+<zk xmlns="http://www.zkoss.org/2005/zul">
+    <window title="Gerenciador de Notificações de Hospital" border="normal" width="550px"
+            apply="br.com.hospital.notificacao.NotificacaoController">
+        <vlayout>
+            <hlayout>
+                <textbox id="txtMensagem" placeholder="Nova notificação" width="350px" />
+                <button id="btnAdicionar" label="Adicionar" />
+            </hlayout>
+            <listbox id="listNotificacoes" width="550px" mold="paging" pageSize="10">
+                <listhead>
+                    <listheader label="ID" width="60px" />
+                    <listheader label="Mensagem" />
+                    <listheader label="Data" width="180px" />
+                </listhead>
+            </listbox>
+        </vlayout>
+    </window>
+</zk>
