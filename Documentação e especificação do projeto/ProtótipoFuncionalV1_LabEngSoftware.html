@@ -1,0 +1,1054 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Protótipo funcional · Sistema de Gestão de Notificações de Segurança do Paciente — NSP HU/UEM</title>
+<style>
+  :root{
+    --bg:#ECE8E0; --paper:#F5F4EF; --ink:#26231f; --muted:#7c766c; --muted2:#9a948a;
+    --line:#e3ded4; --card:#ffffff; --panel:#211e1a;
+    --s-aberto-bg:#e3effb; --s-aberto-fg:#2b6cb0;
+    --s-analise-bg:#fbecd9; --s-analise-fg:#b5651d;
+    --s-invest-bg:#efeafb; --s-invest-fg:#6b4fc0;
+    --s-plano-bg:#e7f3ea; --s-plano-fg:#2f8a52;
+    --s-concl-bg:#e4f3df; --s-concl-fg:#3f8a37;
+    /* risco */
+    --r-baixo-bg:#e4f3df; --r-baixo-fg:#3f8a37; --r-baixo:#4e9c3e;
+    --r-medio-bg:#fbf0d6; --r-medio-fg:#a07c12; --r-medio:#c89a1f;
+    --r-alto-bg:#fbe6d6; --r-alto-fg:#b1571a; --r-alto:#dd6f1e;
+    --r-extremo-bg:#fbe3e6; --r-extremo-fg:#a8312b; --r-extremo:#c0392b;
+  }
+  [data-type="tecno"]{--c:#2f80d6;--c-d:#225fa3;--soft:#eaf2fc;--head:#cfe2f6;--ring:#bcd8f4}
+  [data-type="farmaco"]{--c:#dd6f1e;--c-d:#b1571a;--soft:#fbeee6;--head:#f6d0b6;--ring:#f2c3a3}
+  [data-type="paciente"]{--c:#b07a1c;--c-d:#8a5f15;--soft:#faf1dd;--head:#fbe0a3;--ring:#f3d28a}
+  [data-type="nearmiss"]{--c:#d6336c;--c-d:#a82654;--soft:#fce9f0;--head:#f6cdde;--ring:#f1bcd2}
+  [data-type="assist"]{--c:#4e9c3e;--c-d:#3c7a30;--soft:#eef5e3;--head:#d6ecbb;--ring:#c8e3a8}
+  [data-type="admin"]{--c:#4a4742;--c-d:#2f2c28;--soft:#efece6;--head:#dcd8d0;--ring:#cfcabf}
+
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;display:flex;min-height:100vh}
+  button{font-family:inherit;cursor:pointer}
+  a{color:inherit}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+
+  /* shell */
+  .rail{width:256px;flex:0 0 256px;background:#211e1a;color:#cfc9bf;padding:18px 14px;position:sticky;top:0;height:100vh;overflow-y:auto}
+  .rail h1{font-size:13px;letter-spacing:.03em;color:#fff;margin:2px 6px 0}
+  .rail .sub{font-size:10.5px;color:#8a847a;margin:2px 6px 16px;line-height:1.4}
+  .rail .grp{font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:#6f695f;margin:16px 6px 6px;font-weight:700}
+  .rail a{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;color:#cfc9bf;text-decoration:none;font-size:12.5px;line-height:1.25;transition:background .12s,color .12s;cursor:pointer}
+  .rail a:hover{background:#2c2925;color:#fff}
+  .rail a.on{background:#34302b;color:#fff}
+  .rail .dot{width:7px;height:7px;border-radius:50%;flex:0 0 7px}
+  .rail .reset{margin-top:16px;width:100%;background:#2c2925;border:1px solid #3a352f;color:#cfc9bf;border-radius:8px;padding:8px;font-size:11.5px}
+  .rail .reset:hover{background:#34302b;color:#fff}
+  .stage{flex:1;display:flex;align-items:flex-start;justify-content:center;padding:30px 22px 70px;overflow-x:hidden}
+  .menu-btn{display:none}
+
+  /* phone */
+  .phone{width:392px;background:#fff;border-radius:30px;overflow:hidden;box-shadow:0 24px 60px rgba(40,35,28,.2),0 4px 14px rgba(40,35,28,.1);border:1px solid var(--line)}
+  .scr{display:none}.scr.show{display:block}
+  .phone .top{background:var(--head);padding:13px 0 11px;text-align:center}
+  .phone .brand{font-weight:700;font-size:13.5px;color:var(--c-d)}
+  .pbody{padding:20px 20px 24px;background:var(--soft);min-height:580px;display:flex;flex-direction:column}
+  .badge-ico{width:60px;height:60px;border-radius:50%;background:var(--c);display:flex;align-items:center;justify-content:center;margin:12px auto;box-shadow:0 6px 16px color-mix(in srgb,var(--c) 38%,transparent)}
+  .badge-ico svg{width:29px;height:29px}
+  .ptitle{text-align:center;font-size:20px;font-weight:800;line-height:1.2;margin:0 8px 4px;color:#23201c}
+  .psub{text-align:center;font-size:12.5px;color:var(--muted);margin:0 0 18px}
+  .ftag{text-align:center;font-size:10.5px;letter-spacing:.05em;color:var(--c-d);background:#fff;border:1px solid var(--ring);border-radius:20px;padding:4px 11px;display:inline-block;margin:0 auto 14px;align-self:center}
+  .btn{display:flex;align-items:center;justify-content:center;gap:7px;width:100%;border:none;border-radius:12px;padding:14px;font-size:14.5px;font-weight:700;transition:transform .08s,filter .12s;text-decoration:none}
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--c);color:#fff}.btn-primary:hover{filter:brightness(1.05)}
+  .btn-ghost{background:#fff;color:#2f2b26;border:1px solid var(--ring);font-weight:600}.btn-ghost:hover{background:#fbfaf7}
+  .btn-dark{background:#2b2723;color:#fff}
+  .btn-link{background:none;border:none;color:var(--c-d);font-size:12.5px;font-weight:600;text-decoration:underline;padding:6px}
+  .stack{display:flex;flex-direction:column;gap:10px;margin-top:auto}
+  .lawnote{text-align:center;font-size:11px;color:var(--muted);margin-top:16px;line-height:1.5}
+  .steps{display:flex;align-items:center;justify-content:center;gap:5px;margin:4px 0}
+  .steps i{height:4px;width:30px;border-radius:3px;background:var(--ring)}.steps i.done{background:var(--c)}
+  .stepcap{text-align:center;font-size:10.5px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin:2px 0 14px;font-weight:700}
+  .field{margin-bottom:13px}
+  .field label{display:block;font-size:12.5px;font-weight:600;color:#3a352f;margin-bottom:6px}
+  .req{color:#c0392b}
+  .inp,.sel,.ta{width:100%;border:1px solid var(--ring);background:#fff;border-radius:10px;padding:11px 12px;font-size:13.5px;color:#2f2b26;font-family:inherit}
+  .ta{resize:vertical;min-height:84px}
+  .sel{appearance:none;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%23999' stroke-width='1.5' fill='none' stroke-linecap='round'/></svg>");background-repeat:no-repeat;background-position:right 12px center}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .toggle{display:flex;gap:9px}
+  .toggle button{flex:1;border-radius:10px;padding:10px;font-size:13px;font-weight:700;border:1px solid var(--ring);background:#fff;color:#3a352f}
+  .toggle button.sel-on{background:var(--c);color:#fff;border-color:var(--c)}
+  .card-soft{background:#fff;border:1px solid var(--ring);border-radius:14px;padding:15px}
+  .card-soft h4{margin:0 0 7px;font-size:13.5px;color:var(--c-d)}
+  .card-soft p{margin:0 0 8px;font-size:12.5px;color:#4a443c;line-height:1.55}
+  .dz{border:2px dashed var(--ring);border-radius:12px;padding:20px 12px;text-align:center;color:var(--muted);font-size:12px;background:#fff}
+  .dz svg{width:18px;height:18px;fill:var(--muted);display:block;margin:0 auto 5px}
+  .navrow{display:flex;gap:9px;margin-top:16px}
+  .navrow .btn-ghost{flex:0 0 44%}
+  .check{width:60px;height:60px;border-radius:50%;background:var(--c);display:flex;align-items:center;justify-content:center;margin:6px auto 12px}
+  .check svg{width:28px;height:28px;stroke:#fff;stroke-width:3;fill:none}
+  .codebox{background:#fff;border:1px solid var(--ring);border-radius:12px;padding:13px 15px;margin:9px 0}
+  .codebox .k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+  .codebox .v{font-size:18px;font-weight:800;color:#23201c;letter-spacing:.02em}
+  .codebox .v.mono{font-family:'SF Mono',ui-monospace,Menlo,monospace;font-size:16px}
+  .hint{text-align:center;font-size:11px;color:var(--muted);margin:6px 4px 0;line-height:1.5}
+  .selgrid{display:flex;flex-direction:column;gap:8px}
+  .seltype{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--ring);border-radius:12px;padding:11px 13px;text-align:left;width:100%}
+  .seltype .si{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:0 0 34px}
+  .seltype .si svg{width:18px;height:18px}
+  .seltype b{display:block;font-size:13.5px;color:#23201c}
+  .seltype span{font-size:11px;color:var(--muted)}
+  .grouplbl{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2);font-weight:700;margin:10px 2px 2px}
+
+  /* desktop browser */
+  .browser{width:min(1200px,100%);background:#fff;border-radius:14px;overflow:hidden;border:1px solid var(--line);box-shadow:0 24px 60px rgba(40,35,28,.18)}
+  .chrome{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#e9e5dd;border-bottom:1px solid var(--line)}
+  .chrome .dots{display:flex;gap:6px}.chrome .dots span{width:11px;height:11px;border-radius:50%;background:#cfc8bc}
+  .chrome .url{flex:1;background:#fff;border-radius:7px;padding:6px 12px;font-size:12px;color:#8a847a;border:1px solid #ddd7cc}
+  .app{display:flex;min-height:660px;background:var(--paper)}
+  .side{width:212px;flex:0 0 212px;background:#211e1a;color:#b7b1a6;padding:16px 0;display:flex;flex-direction:column}
+  .side .logo{padding:0 18px 14px}.side .logo b{display:block;color:#fff;font-size:15px}.side .logo span{font-size:10.5px;color:#8a847a}
+  .side nav a{display:flex;align-items:center;gap:9px;padding:11px 18px;color:#b7b1a6;text-decoration:none;font-size:13.5px;border-left:3px solid transparent;transition:.12s;cursor:pointer}
+  .side nav a:hover{background:#2a2723;color:#fff}.side nav a.on{background:#312d28;color:#fff;border-left-color:var(--c)}
+  .side .who{margin-top:auto;padding:14px 18px 4px;border-top:1px solid #312d28;font-size:11px;color:#8a847a}
+  .side .who b{color:#cfc9bf;display:block;font-size:12px}
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .topbar{background:#fff;border-bottom:1px solid var(--line);padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+  .topbar h2{margin:0;font-size:21px;font-weight:800;color:#23201c}
+  .topbar .crumb{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .content{padding:22px 26px;overflow-x:auto}
+  .ascr{display:none}.ascr.show{display:block}
+
+  .kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:13px;margin-bottom:22px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:13px;padding:15px 16px;position:relative;overflow:hidden}
+  .kpi .lab{font-size:11.5px;color:var(--muted);margin-bottom:7px}
+  .kpi .val{font-size:27px;font-weight:800;color:#23201c;line-height:1;font-variant-numeric:tabular-nums}
+  .kpi .delta{font-size:11px;margin-top:6px}
+  .kpi .stripe{position:absolute;left:0;top:0;bottom:0;width:4px}
+  .kpi.alert .val{color:#c0392b}
+
+  .chips{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{border:1px solid var(--ring);background:#fff;border-radius:20px;padding:7px 14px;font-size:12.5px;color:#4a443c;cursor:pointer}
+  .chip.on{background:#2b2723;border-color:#2b2723;color:#fff;font-weight:600}
+  table.list{width:100%;border-collapse:collapse;margin-top:6px;font-size:13.5px}
+  table.list th{text-align:left;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);padding:12px 12px;background:#f3f0ea;font-weight:700}
+  table.list th:first-child{border-top-left-radius:10px}table.list th:last-child{border-top-right-radius:10px}
+  table.list td{padding:13px 12px;border-bottom:1px solid var(--line);color:#3a352f;vertical-align:middle}
+  table.list tr.dup td{background:#fffaf2}
+  .tg{display:inline-block;padding:4px 11px;border-radius:16px;font-size:11.5px;font-weight:600;white-space:nowrap}
+  .num{color:var(--muted);font-variant-numeric:tabular-nums}
+  .dupflag{font-size:10px;color:#b1571a;background:#fbecd9;border-radius:10px;padding:2px 7px;margin-left:6px;font-weight:600}
+  .linkbtn{color:var(--s-aberto-fg);font-weight:600;cursor:pointer;font-size:12.5px}
+  .pag{display:flex;justify-content:space-between;align-items:center;margin-top:16px;color:var(--muted);font-size:12.5px}
+  .pag .pages{display:flex;gap:7px}
+  .pag .pages button{width:34px;height:34px;border-radius:9px;border:1px solid var(--ring);background:#fff;font-size:12.5px;color:#3a352f;cursor:pointer}
+  .pag .pages button.on{background:#2b2723;border-color:#2b2723;color:#fff;font-weight:700}
+
+  .tcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-left:5px solid var(--c)}
+  .tcard h3{margin:0 0 4px;font-size:15px;color:#23201c}
+  .tcard .meta{font-size:12px;color:var(--muted);margin-bottom:6px}
+  .tcard p{margin:0;font-size:13px;color:#4a443c}
+  .tcard .acts{display:flex;gap:9px;flex:0 0 auto}
+  .bsm{border-radius:9px;padding:9px 15px;font-size:12.5px;font-weight:600;border:1px solid var(--ring);background:#fff;color:#3a352f;cursor:pointer}
+  .bsm.warn{background:#dd6f1e;color:#fff;border-color:#dd6f1e}
+  .bsm.go{background:#2f80d6;color:#fff;border-color:#2f80d6}
+  .alertpill{background:#fbe3e6;color:#c0392b;border-radius:20px;padding:7px 15px;font-size:12.5px;font-weight:600}
+
+  /* risk matrix */
+  .rm-wrap{display:flex;gap:26px;flex-wrap:wrap;align-items:flex-start}
+  .rmatrix{border-collapse:collapse}
+  .rmatrix th{font-size:10.5px;color:var(--muted);font-weight:700;padding:5px}
+  .rmatrix .cell{width:62px;height:46px;border:2px solid #fff;border-radius:7px;text-align:center;font-size:11px;font-weight:700;color:#fff;cursor:pointer;transition:transform .1s}
+  .rmatrix .cell:hover{transform:scale(1.06)}
+  .rmatrix .cell.sel{outline:3px solid #23201c;outline-offset:1px}
+  .axis-y{writing-mode:vertical-rl;transform:rotate(180deg);font-size:10.5px;color:var(--muted);font-weight:700;letter-spacing:.06em}
+  .rm-out{min-width:230px}
+  .rm-out .big{font-size:15px;font-weight:800;margin:2px 0 4px}
+
+  .stepper{display:flex;align-items:center;margin:14px 0 22px;flex-wrap:wrap}
+  .stepper .st{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+  .stepper .st b{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;background:#ddd7cc;color:#fff}
+  .stepper .st.done b{background:#4e9c3e}.stepper .st.act b{background:#2f80d6}
+  .stepper .st.act{color:#2f80d6;font-weight:700}.stepper .st.done{color:#4e9c3e}
+  .stepper .bar{flex:1;min-width:18px;height:3px;background:#ddd7cc;margin:0 6px 18px;border-radius:2px}.stepper .bar.done{background:#4e9c3e}
+
+  .panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px 26px;margin-bottom:18px}
+  .panel h3{margin:0 0 3px;font-size:17px;color:#23201c}
+  .panel .pmeta{font-size:12.5px;color:var(--muted);margin-bottom:6px}
+  .sec-title{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--c-d);font-weight:800;margin:22px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--ring);display:flex;align-items:center;gap:8px}
+  .sec-title .n{background:var(--soft);color:var(--c-d);border-radius:6px;width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-size:11px}
+  .dlabel{font-size:13px;font-weight:700;color:#3a352f;margin:14px 0 7px}
+  .dinput{width:100%;border:1px solid var(--ring);background:#faf8f4;border-radius:10px;padding:11px 13px;font-size:13.5px;color:#3a352f;font-family:inherit}
+  textarea.dinput{resize:vertical;min-height:64px}
+  .foot{display:flex;justify-content:flex-end;gap:11px;margin-top:22px;flex-wrap:wrap}
+  .bmd{border-radius:10px;padding:11px 20px;font-size:13.5px;font-weight:600;border:1px solid var(--ring);background:#fff;color:#3a352f;cursor:pointer}
+  .bmd.dark{background:#2b2723;color:#fff;border-color:#2b2723}
+  .bmd.blue{background:#2f80d6;color:#fff;border-color:#2f80d6}
+
+  /* timeline */
+  .tl{display:flex;gap:0;overflow-x:auto;padding:6px 2px 12px}
+  .tl .ev{flex:0 0 200px;background:#faf8f4;border:1px solid var(--line);border-radius:12px;padding:12px 13px;margin-right:14px;position:relative}
+  .tl .ev .when{font-size:11px;color:var(--c-d);font-weight:700;margin-bottom:5px}
+  .tl .ev .what{font-size:12.5px;color:#3a352f;line-height:1.45}
+  .tl .ev::after{content:'→';position:absolute;right:-13px;top:50%;transform:translateY(-50%);color:var(--muted2);font-size:15px}
+  .tl .ev:last-child::after{display:none}
+  .tl .ev.add{border-style:dashed;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12.5px;cursor:pointer}
+
+  /* contributing factors grid */
+  .cfgrid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+  .cf{border:1px solid var(--line);border-radius:11px;overflow:hidden}
+  .cf .h{padding:9px 13px;font-size:11.5px;font-weight:800;background:var(--cf-bg,#f3f0ea);color:var(--cf-fg,#3a352f)}
+  .cf textarea{width:100%;border:none;padding:11px 13px;font-size:12.5px;color:#3a352f;font-family:inherit;resize:vertical;min-height:52px;background:#fff}
+  .cf-prof{--cf-bg:#eaf2fc;--cf-fg:#225fa3}.cf-com{--cf-bg:#efeafb;--cf-fg:#6b4fc0}
+  .cf-pac{--cf-bg:#fce9f0;--cf-fg:#a82654}.cf-amb{--cf-bg:#eef5e3;--cf-fg:#3c7a30}
+  .cf-org{--cf-bg:#fbf0d6;--cf-fg:#a07c12}.cf-ext{--cf-bg:#f1ece6;--cf-fg:#6b6258}
+
+  /* 5 whys */
+  .whys{display:flex;flex-direction:column;gap:9px}
+  .why{display:flex;align-items:center;gap:11px}
+  .why .lbl{flex:0 0 168px;font-size:12px;font-weight:700;color:#3a352f}
+  .why .lbl small{display:block;font-weight:500;color:var(--muted);font-size:10.5px}
+  .why input{flex:1;border:1px solid var(--ring);background:#faf8f4;border-radius:9px;padding:10px 12px;font-size:13px;color:#3a352f;font-family:inherit}
+  .why:last-child input{border-color:var(--r-extremo);background:#fdf3f3}
+
+  /* 5w2h table */
+  .w5tab{width:100%;border-collapse:collapse;font-size:12.5px;min-width:920px}
+  .w5tab th{background:#2b2723;color:#fff;padding:10px 10px;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;text-align:left;font-weight:700}
+  .w5tab th:first-child{border-top-left-radius:9px}.w5tab th:last-child{border-top-right-radius:9px}
+  .w5tab td{padding:11px 10px;border-bottom:1px solid var(--line);color:#3a352f;vertical-align:top}
+  .w5tab tr:nth-child(even) td{background:#faf8f4}
+  .w5tab .cod{font-weight:700;color:var(--muted)}
+  .stbar{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;margin-bottom:18px}
+  .stbox{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:#fff;text-align:center}
+  .stbox .n{font-size:22px;font-weight:800;line-height:1}.stbox .l{font-size:10.5px;color:var(--muted);margin-top:5px}
+
+  /* effort x impact */
+  .eim{display:grid;grid-template-columns:repeat(2,150px);grid-template-rows:repeat(2,90px);gap:8px}
+  .eim .q{border-radius:11px;padding:12px;color:#fff;font-size:12px;font-weight:700;position:relative}
+  .eim .q small{display:block;font-weight:500;opacity:.9;margin-top:3px;font-size:10.5px}
+  .eim .pin{position:absolute;background:#fff;color:#23201c;border-radius:14px;padding:3px 8px;font-size:10.5px;font-weight:700;bottom:8px;right:8px;box-shadow:0 2px 6px rgba(0,0,0,.2)}
+
+  /* indicadores cards */
+  .icards{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+  .ic{border:1.5px solid var(--ic);border-radius:13px;overflow:hidden;background:#fff;display:flex;flex-direction:column;min-height:128px}
+  .ic .ich{padding:12px 15px;font-size:13.5px;font-weight:800;text-align:center;background:var(--ic-soft);color:var(--ic-fg)}
+  .ic .icm{padding:9px 15px 0;font-size:11px;color:var(--muted);text-align:center}
+  .ic .icb{flex:1;display:flex;align-items:flex-end;justify-content:space-between;padding:12px 15px}
+  .ic a{font-size:12.5px;font-weight:600;color:var(--ic-fg);text-decoration:none;cursor:pointer}
+  .ic .ext{font-size:10.5px;color:var(--muted)}
+  .ic.wide{grid-column:1/-1;border-color:var(--line)}
+  .ic.wide .ich{background:#fff;color:#23201c;border-bottom:1px solid var(--line)}
+  .ic.wide .icb{display:block;color:#4a443c;font-size:12.5px;line-height:1.85}
+
+  .tabs{display:flex;border-bottom:1px solid var(--line);margin-bottom:16px}
+  .tabs button{padding:11px 17px;font-size:13.5px;font-weight:600;border:none;background:none;color:var(--muted);border-bottom:2px solid transparent;cursor:pointer}
+  .tabs button.on{color:#2f80d6;border-bottom-color:#2f80d6}
+  .barx{display:flex;justify-content:space-between;align-items:center;margin-bottom:13px;gap:12px;flex-wrap:wrap}
+  .seldd{border:1px solid var(--ring);background:#fff;border-radius:9px;padding:8px 13px;font-size:12.5px;color:#3a352f}
+  .note{background:#fffaf2;border:1px solid #f2d9b0;border-radius:11px;padding:12px 15px;font-size:12.5px;color:#7a5a1e;margin-bottom:16px;line-height:1.55}
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(20px);background:#2b2723;color:#fff;padding:12px 20px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:.25s;z-index:60}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:12px}
+  .legend span{display:inline-flex;align-items:center;gap:6px}.legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+
+  @media (max-width:880px){
+    body{flex-direction:column}
+    .rail{position:fixed;left:0;top:0;z-index:40;transform:translateX(-100%);transition:transform .2s}
+    .rail.open{transform:translateX(0)}
+    .menu-btn{display:flex;position:fixed;top:12px;left:12px;z-index:45;background:#211e1a;color:#fff;border:none;border-radius:10px;padding:10px 13px;font-size:13px;gap:7px}
+    .stage{padding:60px 10px 50px}
+    .kpis{grid-template-columns:repeat(2,1fr)}.icards{grid-template-columns:1fr}.cfgrid{grid-template-columns:1fr}
+    .stbar{grid-template-columns:repeat(3,1fr)}.app{flex-direction:column}
+    .side{width:100%;flex:none}.tcard{flex-direction:column;align-items:stretch}
+  }
+</style><style>
+  .fbar{display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap}
+  .search{flex:1;min-width:240px;max-width:360px;border:1px solid var(--ring);background:#fff;border-radius:10px;padding:9px 13px;font-size:13px;color:#3a352f;font-family:inherit}
+  .empty{text-align:center;color:var(--muted);padding:34px 12px;font-size:13.5px}
+  .w5tab .seldd{cursor:pointer}
+</style>
+</head>
+<body data-type="tecno">
+<button class="menu-btn" onclick="document.querySelector('.rail').classList.toggle('open')">☰ Telas</button>
+
+<aside class="rail">
+  <h1>NSP HU/UEM · Protótipo funcional</h1>
+  <p class="sub">Gestão de Notificações de Segurança do Paciente · Hospital Sentinela</p>
+
+  <div class="grp">App do notificante (QR)</div>
+  <a data-go="selector"><span class="dot" style="background:#9b958a"></span> Entrada / leitura do QR</a>
+  <a data-go="landing"><span class="dot" style="background:var(--c)"></span> Tela de acesso (por tipo)</a>
+  <a data-go="w1"><span class="dot" style="background:#2f80d6"></span> Passo 1 · Sigilo (LGPD)</a>
+  <a data-go="w2"><span class="dot" style="background:#2f80d6"></span> Passo 2 · Dados do incidente</a>
+  <a data-go="w3"><span class="dot" style="background:#2f80d6"></span> Passo 3 · Descrição + anexos</a>
+  <a data-go="w4"><span class="dot" style="background:#2f80d6"></span> Passo 4 · Contato (opcional)</a>
+  <a data-go="done"><span class="dot" style="background:#4e9c3e"></span> Conclusão · protocolo</a>
+  <a data-go="track"><span class="dot" style="background:#2f80d6"></span> Acompanhar protocolo</a>
+  <a data-go="login"><span class="dot" style="background:#9b958a"></span> Acesso administrativo</a>
+
+  <div class="grp">Painel da Qualidade (NSP)</div>
+  <a data-go="painel"><span class="dot" style="background:#dad4c8"></span> Painel / visão geral</a>
+  <a data-go="lista"><span class="dot" style="background:#dad4c8"></span> Notificações</a>
+  <a data-go="triagem"><span class="dot" style="background:#dad4c8"></span> Triagem & classificação</a>
+  <a data-go="invest"><span class="dot" style="background:#dad4c8"></span> Investigação (FOR-NSP-014)</a>
+  <a data-go="plano"><span class="dot" style="background:#dad4c8"></span> Plano de ação 5W2H</a>
+  <a data-go="indic"><span class="dot" style="background:#dad4c8"></span> Indicadores & BI</a>
+  <a data-go="indicForm"><span class="dot" style="background:#dad4c8"></span> Indicadores · formulários</a>
+
+  <button class="reset" onclick="resetType()">↺ Resetar tipo (atual: <span id="curtype">Tecnovigilância</span>)</button>
+  <button class="reset" onclick="seedReset()" style="margin-top:6px">⟲ Restaurar dados de demonstração</button>
+</aside>
+
+<main class="stage">
+
+  <!-- ===================== PHONE ===================== -->
+  <div class="phone" id="phone">
+    <div class="top"><div class="brand">⬢ HU-UEM · NSP</div></div>
+    <div class="pbody">
+
+      <section class="scr" id="s-selector">
+        <p class="stepcap" style="margin-top:6px">Simulação · leitura de QR Code</p>
+        <p class="ptitle" style="font-size:17px">Canal de notificações</p>
+        <p class="psub">5 QR Codes distribuídos pelo hospital — 4 para profissionais, 1 para pacientes e acompanhantes.</p>
+        <div class="grouplbl">Profissionais (4 acessos)</div>
+        <div class="selgrid">
+          <button class="seltype" data-pick="tecno"><span class="si" style="background:#eaf2fc"><svg fill="#2f80d6" viewBox="0 0 24 24"><path d="M12 2a2 2 0 00-2 2c0 .7.4 1.3 1 1.7V7H8v2h3v2H9v2h2v6h2v-6h2v-2h-2V9h3V7h-3V5.7c.6-.4 1-1 1-1.7a2 2 0 00-2-2z"/></svg></span><span><b>Tecnovigilância</b><span>Equipamentos e materiais · FOR-NSP-005</span></span></button>
+          <button class="seltype" data-pick="farmaco"><span class="si" style="background:#fbeee6"><svg fill="none" stroke="#dd6f1e" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M10.5 3.5a4 4 0 015.7 5.7l-7 7a4 4 0 01-5.7-5.7l7-7zM9 9l4 4"/></svg></span><span><b>Farmacovigilância</b><span>Medicamentos e vacinas · FOR-NSP-002</span></span></button>
+          <button class="seltype" data-pick="nearmiss"><span class="si" style="background:#fce9f0"><svg fill="none" stroke="#d6336c" stroke-width="1.8" stroke-linecap="round" viewBox="0 0 24 24"><path d="M12 3a5 5 0 100 10 5 5 0 000-10zm0 10v5m-3-3h6"/></svg></span><span><b>Near Miss Materno</b><span>Segurança materna · FOR-NSP-004</span></span></button>
+          <button class="seltype" data-pick="assist"><span class="si" style="background:#eef5e3"><svg fill="#4e9c3e" viewBox="0 0 24 24"><path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5 6 5c2 0 3.2 1.2 4 2.4C10.8 6.2 12 5 14 5c3.5 0 5 4 3.5 7-2.5 4.5-9.5 9-9.5 9z"/></svg></span><span><b>Problemas Assistenciais</b><span>Segurança do paciente · FOR-NSP-001</span></span></button>
+        </div>
+        <div class="grouplbl">Pacientes e acompanhantes (1 acesso)</div>
+        <div class="selgrid">
+          <button class="seltype" data-pick="paciente"><span class="si" style="background:#faf1dd"><svg fill="#b07a1c" viewBox="0 0 24 24"><path d="M12 12a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 0114 0H5z"/></svg></span><span><b>Notificação do Paciente</b><span>Denúncia, reclamação, sugestão ou elogio</span></span></button>
+        </div>
+        <div class="stack" style="margin-top:16px;gap:9px">
+          <button class="btn btn-ghost" data-go="track">Acompanhar protocolo</button>
+          <button class="btn btn-dark" data-go="login">Acesso administrativo</button>
+        </div>
+      </section>
+
+      <section class="scr" id="s-landing">
+        <div class="badge-ico" id="landIco"></div>
+        <h2 class="ptitle" id="landTitle">Notificação de Tecnovigilância</h2>
+        <p class="psub" id="landSub">Equipamentos e materiais médicos</p>
+        <div style="text-align:center"><span class="ftag" id="landForm">FOR-NSP-005-2026</span></div>
+        <div class="stack">
+          <button class="btn btn-primary" data-go="w1">Realizar nova notificação</button>
+          <button class="btn btn-ghost" data-go="track">Acompanhar protocolo</button>
+          <a class="btn-link" id="formLink" href="#" target="_blank" rel="noopener">Abrir formulário oficial (Google Forms) ↗</a>
+        </div>
+        <p class="lawnote">🔒 Sigilo absoluto garantido · Lei 13.608/2018<br>Dados protegidos pela LGPD</p>
+      </section>
+
+      <section class="scr" id="s-w1">
+        <div class="steps"><i class="done"></i><i></i><i></i><i></i></div>
+        <p class="stepcap">Passo 1 de 4</p>
+        <h2 class="ptitle" style="font-size:17px">Compromisso com o sigilo</h2>
+        <p class="psub" style="margin-bottom:14px">Lei 13.608/2018 · LGPD</p>
+        <div class="card-soft">
+          <h4>Canal de notificações</h4>
+          <p>Este canal opera em conformidade com a legislação brasileira, garantindo proteção ao notificante e anonimato absoluto, se desejado.</p>
+          <p>O tratamento segue a LGPD, com uso exclusivo para investigação interna pelo Núcleo de Segurança do Paciente (NSP).</p>
+          <p style="color:var(--muted);font-size:11px;margin:0">* Esta notificação não substitui o atendimento clínico. Em emergência, procure a equipe assistencial.</p>
+        </div>
+        <div class="navrow">
+          <button class="btn btn-ghost" data-go="landing">← Voltar</button>
+          <button class="btn btn-primary" data-go="w2">Prosseguir →</button>
+        </div>
+      </section>
+
+      <section class="scr" id="s-w2">
+        <div class="steps"><i class="done"></i><i class="done"></i><i></i><i></i></div>
+        <p class="stepcap">Passo 2 de 4</p>
+        <h2 class="ptitle" style="font-size:17px" id="w2title">Dados do incidente</h2>
+        <p class="psub" style="margin-bottom:16px" id="w2sub">FOR-NSP-005-2026 · Queixa técnica</p>
+        <div class="row2">
+          <div class="field"><label>Data do incidente <span class="req">*</span></label><input class="inp" id="f_date" placeholder="dd/mm/aaaa"></div>
+          <div class="field"><label>Hora aprox.</label><input class="inp" id="f_hora" placeholder="hh:mm"></div>
+        </div>
+        <div class="field"><label>Setor / unidade <span class="req">*</span></label>
+          <select class="sel" id="f_setor"><option value="">Selecione…</option><option>Pronto Socorro</option><option>Enfermaria</option><option>UTI Adulto</option><option>UTI Neonatal</option><option>Maternidade</option><option>Centro Cirúrgico</option><option>Farmácia</option><option>Ambulatório</option></select></div>
+        <div id="w2dynamic"></div>
+        <div class="field"><label>Pré-classificação da gravidade <span class="req">*</span></label>
+          <select class="sel" id="f_grav"><option value="">Selecione…</option><option>Circunstância de risco</option><option>Near miss (quase erro)</option><option>Incidente sem dano</option><option>Dano leve</option><option>Dano moderado</option><option>Dano grave</option><option>Óbito</option></select></div>
+        <div class="field"><label>Gerou dano ao paciente?</label>
+          <div class="toggle" id="f_dano"><button onclick="pick(this)">Sim</button><button class="sel-on" onclick="pick(this)">Não</button></div></div>
+        <div class="field"><label>Nº do prontuário (se aplicável)</label><input class="inp" id="f_pront" placeholder="Opcional"></div>
+        <div class="navrow">
+          <button class="btn btn-ghost" data-go="w1">← Voltar</button>
+          <button class="btn btn-primary" data-go="w3">Próximo →</button>
+        </div>
+      </section>
+
+      <section class="scr" id="s-w3">
+        <div class="steps"><i class="done"></i><i class="done"></i><i class="done"></i><i></i></div>
+        <p class="stepcap">Passo 3 de 4</p>
+        <h2 class="ptitle" style="font-size:17px;text-align:left;margin-left:0">Descrição e anexos</h2>
+        <p class="psub" style="text-align:left;margin-bottom:12px">Descreva o ocorrido em detalhes</p>
+        <div class="field"><textarea class="ta" id="f_desc" placeholder="O que aconteceu? Inclua o produto/medicamento/equipamento envolvido, circunstâncias, pessoas presentes e consequências observadas."></textarea></div>
+        <div class="dz" onclick="fakeAttach()">
+          <svg viewBox="0 0 24 24"><path d="M12 3l4 4h-3v6h-2V7H8l4-4zM5 18h14v2H5z"/></svg>
+          <span id="attachLabel">Anexar fotos ou documentos</span><br><span style="font-size:10.5px">JPG, PNG, PDF — até 10 MB</span>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin:10px 2px 0">Anexos ajudam a equipe da Qualidade a investigar com mais precisão.</p>
+        <div class="navrow">
+          <button class="btn btn-ghost" data-go="w2">← Voltar</button>
+          <button class="btn btn-primary" data-go="w4">Próximo →</button>
+        </div>
+      </section>
+
+      <section class="scr" id="s-w4">
+        <div class="steps"><i class="done"></i><i class="done"></i><i class="done"></i><i class="done"></i></div>
+        <p class="stepcap">Passo 4 de 4</p>
+        <h2 class="ptitle" style="font-size:17px;text-align:left">Contato (opcional)</h2>
+        <p class="psub" style="text-align:left;margin-bottom:12px">Deseja que a equipe possa te contatar?</p>
+        <div class="card-soft" style="margin-bottom:12px">
+          <p>Ao informar e-mail ou telefone você deixa de ser anônimo e permite que a equipe entre em contato para esclarecer dúvidas.</p>
+          <p style="margin:0">Para manter o anonimato, <b>basta concluir sem preencher.</b></p>
+        </div>
+        <p style="font-size:11px;color:var(--muted);margin:0 2px 10px">* Sua identidade nunca é revelada ao setor notificado.</p>
+        <div class="field"><input class="inp" id="f_email" placeholder="seu@email.com (opcional)"></div>
+        <div class="field"><input class="inp" id="f_phone" placeholder="Telefone / WhatsApp (opcional)"></div>
+        <div class="navrow">
+          <button class="btn btn-ghost" data-go="w3">← Voltar</button>
+          <button class="btn btn-primary" onclick="finish()">Concluir ✓</button>
+        </div>
+      </section>
+
+      <section class="scr" id="s-done">
+        <div class="check"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div>
+        <h2 class="ptitle" style="font-size:19px">Recebemos sua notificação!</h2>
+        <p class="psub" id="doneSub">Guarde os dados abaixo — são seu meio de acompanhamento.</p>
+        <div class="codebox"><div class="k">Número do protocolo</div><div class="v" id="doneProto">#TC-2026-004821</div></div>
+        <div class="codebox"><div class="k">Senha de acesso</div><div class="v mono" id="doneSenha">k8@Xm2#qL</div>
+          <div id="emailLine" style="display:none;margin-top:8px"><div class="k">Contato vinculado</div><div style="font-size:12.5px;color:#4a443c" id="emailMasked">jo**@email.com</div></div>
+        </div>
+        <p class="hint" id="doneHint">Notificação anônima — guarde em local seguro.</p>
+        <div class="stack">
+          <button class="btn btn-ghost" onclick="trackThis()">Acompanhar esta notificação</button>
+          <button class="btn btn-primary" data-go="selector">← Voltar ao início</button>
+        </div>
+      </section>
+
+      <section class="scr" id="s-track">
+        <button class="bsm" style="align-self:flex-start;margin-bottom:16px" data-go="landing">← Voltar</button>
+        <h2 class="ptitle" style="font-size:19px">Acompanhar protocolo</h2>
+        <p class="psub" style="margin-bottom:18px">Consulte o status da sua notificação</p>
+        <div class="field"><input class="inp" id="t_proto" placeholder="Número do protocolo (ex.: #TC-2026-004821)"></div>
+        <div class="field"><input class="inp" id="t_senha" placeholder="Senha"></div>
+        <div class="stack" style="margin-top:2px"><button class="btn btn-primary" onclick="doTrack()">Consultar status</button></div>
+        <div id="statusBox" style="margin-top:16px"></div>
+      </section>
+
+      <section class="scr" id="s-login">
+        <div class="badge-ico" style="background:#4a4742;box-shadow:none">
+          <svg fill="#fff" viewBox="0 0 24 24"><path d="M12 2l8 3v6c0 5-3.4 8.4-8 11-4.6-2.6-8-6-8-11V5l8-3z"/></svg></div>
+        <h2 class="ptitle" style="font-size:18px">Acesso administrativo</h2>
+        <p class="psub" style="margin-bottom:8px">Núcleo de Segurança do Paciente</p>
+        <div class="field" style="margin-top:8px"><input class="inp" placeholder="Login institucional" value="ana.qualidade"></div>
+        <div class="field"><input class="inp" type="password" placeholder="Senha" value="••••••••"></div>
+        <div class="stack" style="margin-top:2px"><button class="btn btn-dark" data-go="painel">Entrar</button></div>
+        <p style="text-align:center;font-size:11px;color:var(--muted2);margin:12px 0 0">🔐 SHA-256 · OAuth · CORS</p>
+        <p class="lawnote">* Acesso restrito à equipe da Qualidade</p>
+      </section>
+
+    </div>
+  </div>
+
+  <!-- ===================== ADMIN ===================== -->
+  <div class="browser" id="browser" style="display:none">
+    <div class="chrome"><div class="dots"><span></span><span></span><span></span></div>
+      <div class="url" id="urlbar">nsp.hu-uem.br/painel</div></div>
+    <div class="app" data-type="admin">
+      <aside class="side">
+        <div class="logo"><b>HU · NSP</b><span>Núcleo de Segurança do Paciente</span></div>
+        <nav>
+          <a data-go="painel">▦ Painel</a>
+          <a data-go="lista">▤ Notificações</a>
+          <a data-go="triagem">⚖ Triagem & classificação</a>
+          <a data-go="invest">🔍 Investigação</a>
+          <a data-go="plano">✓ Plano de ação 5W2H</a>
+          <a data-go="indic">📊 Indicadores & BI</a>
+        </nav>
+        <div class="who"><b>Ana · Qualidade</b>Parecerista NSP · Hospital Sentinela</div>
+      </aside>
+      <div class="main">
+        <div class="topbar"><div><h2 id="adminTitle">Painel</h2><div class="crumb" id="adminCrumb"></div></div>
+          <div id="topbarExtra"></div></div>
+        <div class="content" id="adminContent">
+          <section class="ascr" id="a-painel"></section>
+          <section class="ascr" id="a-lista"></section>
+          <section class="ascr" id="a-triagem"></section>
+          <section class="ascr" id="a-invest"></section>
+          <section class="ascr" id="a-plano"></section>
+          <section class="ascr" id="a-indic"></section>
+          <section class="ascr" id="a-indicForm"></section>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+<div class="toast" id="toast"></div>
+<script>
+/* ============================================================
+   NSP HU/UEM — Protótipo funcional (estado em memória)
+   ============================================================ */
+
+/* ---- Google Forms oficiais (troque as URLs quando publicarem) ---- */
+const FORMS={
+  tecno:'https://docs.google.com/forms/d/e/1FAIpQLSezYdapMqIzkYxCQL3A70FkrHUUPL6otL0mAZVA_tuF5lcdww/viewform',
+  farmaco:'https://docs.google.com/forms/d/e/1FAIpQLSf26E2MsIErywrAEkAvtqsyv3FvuzuDLuHSqw08xSWQuyoTeg/viewform',
+  assist:'https://docs.google.com/forms/d/e/1FAIpQLSff4kpcSNAl9ic51c2yVqfTxZmwW-OrT3pHApo-sYVLiRqf-g/viewform',
+  paciente:'https://docs.google.com/forms/d/e/1FAIpQLScrL1lfaNSGDdi8Niy2pbUa_AScvD6lAGtfKutyboNsvRRSPQ/viewform',
+  nearmiss:'https://docs.google.com/forms/d/e/1FAIpQLScrL1lfaNSGDdi8Niy2pbUa_AScvD6lAGtfKutyboNsvRRSPQ/viewform' /* = paciente no material */
+};
+const IND_FORM='https://docs.google.com/forms/d/e/1FAIpQLSeEt6gNSb3omNUyPwHo5P9KVIb1kAN_N1NlfPAwtidPlxHTNA/viewform';
+
+const TYPES={
+  tecno:{title:'Notificação de Tecnovigilância',sub:'Equipamentos e materiais médicos',form:'FOR-NSP-005-2026',w2t:'Dados da queixa técnica',w2s:'FOR-NSP-005-2026 · Tecnovigilância',pref:'TC',name:'Tecnovigilância',short:'Tecnovig.',ico:'caduceus',fill:true,col:'#2f80d6',soft:'#eaf2fc',
+    dyn:'<div class="field"><label>Produto / equipamento afetado <span class="req">*</span></label><input class="inp" id="f_x1" placeholder="Ex.: monitor multiparâmetros"></div><div class="row2"><div class="field"><label>Registro ANVISA</label><input class="inp" id="f_x2" placeholder="Opcional"></div><div class="field"><label>Lote / nº de série</label><input class="inp" id="f_x3" placeholder="Opcional"></div></div>'},
+  farmaco:{title:'Notificação de Farmacovigilância',sub:'Medicamentos e vacinas',form:'FOR-NSP-002-2026',w2t:'Dados do evento adverso',w2s:'FOR-NSP-002-2026 · Farmacovigilância',pref:'FV',name:'Farmacovigilância',short:'Farmaco.',ico:'pill',fill:false,col:'#dd6f1e',soft:'#fbeee6',
+    dyn:'<div class="field"><label>Medicamento / vacina <span class="req">*</span></label><input class="inp" id="f_x1" placeholder="Nome e concentração"></div><div class="row2"><div class="field"><label>Via de administração</label><select class="sel" id="f_x2"><option value="">Selecione…</option><option>Oral</option><option>EV</option><option>IM</option><option>SC</option><option>Tópica</option></select></div><div class="field"><label>Lote</label><input class="inp" id="f_x3" placeholder="Opcional"></div></div><div class="field"><label>Reação adversa observada</label><input class="inp" id="f_x4" placeholder="Ex.: reação alérgica, ineficácia"></div>'},
+  paciente:{title:'Notificação do Paciente',sub:'Denúncia, reclamação, sugestão ou elogio',form:'Ouvidoria · Segurança do paciente',w2t:'Sua manifestação',w2s:'Ouvidoria · pacientes e acompanhantes',pref:'NP',name:'Notificação do Paciente',short:'Paciente',ico:'person',fill:true,col:'#b07a1c',soft:'#faf1dd',
+    dyn:'<div class="field"><label>Tipo de manifestação <span class="req">*</span></label><select class="sel" id="f_x1"><option value="">Selecione…</option><option>Denúncia</option><option>Reclamação</option><option>Sugestão</option><option>Elogio</option></select></div><div class="field"><label>Você é</label><div class="toggle" id="f_x2t"><button class="sel-on" onclick="pick(this)">Paciente</button><button onclick="pick(this)">Acompanhante</button></div></div>'},
+  nearmiss:{title:'Near Miss Materno',sub:'Segurança materna',form:'FOR-NSP-004-2026',w2t:'Dados do near miss materno',w2s:'FOR-NSP-004-2026 · Near Miss Materno',pref:'NM',name:'Near Miss Materno',short:'Near Miss',ico:'venus',fill:false,col:'#d6336c',soft:'#fce9f0',
+    dyn:'<div class="field"><label>Tipo de evento materno <span class="req">*</span></label><select class="sel" id="f_x1"><option value="">Selecione…</option><option>Hemorragia grave</option><option>Pré-eclâmpsia / eclâmpsia</option><option>Sepse</option><option>Ruptura uterina</option><option>Outro near miss</option></select></div><div class="row2"><div class="field"><label>Idade gestacional</label><input class="inp" id="f_x2" placeholder="Semanas"></div><div class="field"><label>Momento</label><select class="sel" id="f_x3"><option value="">Selecione…</option><option>Pré-parto</option><option>Parto</option><option>Pós-parto</option></select></div></div>'},
+  assist:{title:'Notificação de Problemas Assistenciais',sub:'Segurança do paciente',form:'FOR-NSP-001-2026',w2t:'Dados do problema assistencial',w2s:'FOR-NSP-001-2026 · Assistenciais',pref:'PA',name:'Problemas Assistenciais',short:'Assistencial',ico:'heart',fill:true,col:'#4e9c3e',soft:'#eef5e3',
+    dyn:'<div class="field"><label>Tipo de incidente <span class="req">*</span></label><select class="sel" id="f_x1"><option value="">Selecione…</option><option>Queda</option><option>Lesão por pressão</option><option>Erro de identificação</option><option>Flebite</option><option>Falha de comunicação</option><option>Outro</option></select></div>'}
+};
+const ICONS={
+  caduceus:'<path d="M12 2a2 2 0 00-2 2c0 .7.4 1.3 1 1.7V7H8v2h3v2H9v2h2v6h2v-6h2v-2h-2V9h3V7h-3V5.7c.6-.4 1-1 1-1.7a2 2 0 00-2-2z"/>',
+  pill:'<path d="M10.5 3.5a4 4 0 015.7 5.7l-7 7a4 4 0 01-5.7-5.7l7-7zM9 9l4 4"/>',
+  person:'<path d="M12 12a4 4 0 100-8 4 4 0 000 8zm-7 8a7 7 0 0114 0H5z"/>',
+  venus:'<path d="M12 3a5 5 0 100 10 5 5 0 000-10zm0 10v5m-3-3h6"/>',
+  heart:'<path d="M12 21s-7-4.5-9.5-9C1 9 2.5 5 6 5c2 0 3.2 1.2 4 2.4C10.8 6.2 12 5 14 5c3.5 0 5 4 3.5 7-2.5 4.5-9.5 9-9.5 9z"/>'
+};
+
+/* ---- Status do fluxo ---- */
+const STATUS={
+  aberto:{label:'Aberto',cls:'aberto',step:1},
+  triagem:{label:'Em triagem',cls:'analise',step:2},
+  investigacao:{label:'Em investigação',cls:'invest',step:3},
+  plano:{label:'Plano em execução',cls:'plano',step:4},
+  concluido:{label:'Concluído',cls:'concl',step:5}
+};
+const STEP_LABELS=['Abertura','Triagem','Investigação','Plano de ação','Concluído'];
+
+/* ---- Matriz de risco (Base_Classificação) ---- */
+const PROB=[['Quase certo',5],['Provável',4],['Possível',3],['Improvável',2],['Raro',1]];
+const IMP=[['Muito baixo',1],['Baixo',2],['Médio',4],['Alto',8],['Extremo',16]];
+function riskLevel(s){if(s<=4)return['Baixo','baixo'];if(s<=10)return['Médio','medio'];if(s<=24)return['Alto','alto'];return['Extremo','extremo'];}
+
+/* ---- Estado ---- */
+let STATE, TYPE='tecno', HAS_EMAIL=false, SEL=null, LAST=null, filters={status:'todas',q:''};
+
+function seedReset(){
+  STATE={seq:4822, notifs:[]};
+  const seeds=[
+    {type:'assist',date:'07/05/2026',setor:'UTI Adulto',pront:'12345',grav:'Dano moderado',dano:true,desc:'Sinais de infecção associada à assistência identificados após procedimento sem checklist de higienização.',status:'plano',prob:3,imp:8,anon:true,detalhe:'Tipo: Infecção / falha de processo'},
+    {type:'tecno',date:'08/05/2026',setor:'UTI Adulto',pront:'',grav:'Incidente sem dano',dano:false,desc:'Equipamento de monitoração apresentou falha intermitente durante procedimento.',status:'aberto',prob:3,imp:4,anon:true,detalhe:'Produto: monitor multiparâmetros'},
+    {type:'nearmiss',date:'05/05/2026',setor:'Maternidade',pront:'',grav:'Near miss (quase erro)',dano:false,desc:'Evento de quase falha durante o parto, corrigido a tempo pela equipe.',status:'aberto',prob:3,imp:16,anon:true,detalhe:'Evento: Hemorragia grave · Pós-parto'},
+    {type:'farmaco',date:'04/05/2026',setor:'Farmácia',pront:'55432',grav:'Dano leve',dano:true,desc:'Dispensação de medicamento com apresentação divergente da prescrição.',status:'investigacao',prob:2,imp:4,anon:true,detalhe:'Medicamento: Dipirona 500mg · Oral'},
+    {type:'paciente',date:'06/05/2026',setor:'Ambulatório',pront:'98701',grav:'Incidente sem dano',dano:false,desc:'Reclamação sobre tempo de espera prolongado no agendamento.',status:'concluido',prob:1,imp:2,anon:false,contato:'jo**@email.com',detalhe:'Manifestação: Reclamação · Paciente'},
+    {type:'assist',date:'02/05/2026',setor:'Enfermaria',pront:'12345',grav:'Incidente sem dano',dano:false,desc:'Segundo registro relacionado ao mesmo paciente — possível duplicidade.',status:'aberto',prob:2,imp:4,anon:true,detalhe:'Tipo: Queda sem lesão'}
+  ];
+  seeds.forEach(s=>{
+    const t=TYPES[s.type], n={
+      id:String(STATE.seq++), type:s.type, date:s.date, hora:'—', setor:s.setor, pront:s.pront,
+      grav:s.grav, dano:s.dano, desc:s.desc, detalhe:s.detalhe||'', anexos:1, anon:s.anon,
+      contato:s.contato||'', protocolo:'#'+t.pref+'-2026-'+String(4810+ (STATE.seq%50)).padStart(6,'0'),
+      senha:'k8@Xm2#qL', status:s.status,
+      risco:risk(s.prob,s.imp), prob:s.prob, imp:s.imp,
+      invest:null, plano:null, createdAt:s.date
+    };
+    if(s.status==='investigacao'||s.status==='plano'||s.status==='concluido') n.invest=defaultInvest(n);
+    if(s.status==='plano'||s.status==='concluido') n.plano=defaultPlano(n);
+    STATE.notifs.push(n);
+  });
+}
+function risk(prob,imp){const s=prob*imp,[lvl,key]=riskLevel(s);return{prob,imp,score:s,level:lvl,key};}
+
+function defaultInvest(n){return{
+  nea:'Ana · Qualidade', data:n.date, fontes:'Prontuário, anexos, entrevista',
+  timeline:[['07/05 · 02:10','Paciente admitido na unidade.'],['07/05 · 06:40','Procedimento iniciado sem checklist registrado.'],['09/05 · 14:00','Falha identificada pela equipe assistencial.']],
+  fatores:{prof:'Sobrecarga da equipe; ausência de dupla checagem.',com:'Passagem de plantão sem registro do status do checklist.',pac:'Paciente mais vulnerável ao evento.',amb:'Insumo/recurso indisponível no leito.',org:'Processo não obrigatório no fluxo atual.',ext:'—'},
+  whys:['Falha atingiu o paciente.','Etapa de segurança não foi executada.','Não havia conferência obrigatória.','O fluxo não previa registro auditável.','Ausência de protocolo padronizado e auditável.'],
+  deteccao:'Observação da equipe durante reavaliação.',
+  atenuantes:'Intervenção precoce; medidas de contenção aplicadas.',
+  parecer:'Incidente evitável associado a falha sistêmica de processo. Recomenda-se plano de ação com protocolo auditável.'
+};}
+function defaultPlano(n){return[
+  {cod:'1.0',oque:'Implantar checklist auditável da etapa crítica',quem:'Coordenação da unidade',onde:n.setor+' (sistêmico)',porque:'Ausência de protocolo auditável',como:'Treinamento + registro digital por etapa',quanto:'R$ 0,00',ini:'08/05',fim:'20/05',status:'andamento',ev:''},
+  {cod:'2.0',oque:'Repor e auditar insumos no leito',quem:'Suprimentos',onde:n.setor,porque:'Recurso indisponível no leito',como:'Rotina diária de conferência',quanto:'R$ 0,00',ini:'08/05',fim:'12/05',status:'concluido',ev:'Registro de conferência anexado'},
+  {cod:'3.0',oque:'Incluir status na passagem de plantão',quem:'NSP + Enfermagem',onde:'Sistêmico',porque:'Falha de comunicação no plantão',como:'Campo obrigatório no handoff',quanto:'R$ 0,00',ini:'10/05',fim:'25/05',status:'iniciar',ev:''}
+];}
+
+/* ---- util ---- */
+function esc(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function tg(label,cls){return `<span class="tg" style="background:var(--s-${cls}-bg);color:var(--s-${cls}-fg)">${label}</span>`;}
+function rtg(r){return `<span class="tg" style="background:var(--r-${r.key}-bg);color:var(--r-${r.key}-fg)">${r.level}</span>`;}
+function typeBadge(type){const t=TYPES[type];return `<span class="tg" style="background:${t.soft};color:${t.col}">${t.short}</span>`;}
+function genProto(type){const t=TYPES[type];return '#'+t.pref+'-2026-'+String(STATE.seq).padStart(6,'0');}
+function genSenha(){const c='ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#';let s='';for(let i=0;i<9;i++)s+=c[Math.floor(Math.random()*c.length)];return s;}
+function find(id){return STATE.notifs.find(n=>n.id===id);}
+function dupCount(pront){if(!pront)return 0;return STATE.notifs.filter(n=>n.pront===pront).length;}
+
+/* ============================================================
+   MOBILE
+   ============================================================ */
+function applyType(){
+  const t=TYPES[TYPE];
+  document.body.setAttribute('data-type',TYPE);
+  document.getElementById('landTitle').textContent=t.title;
+  document.getElementById('landSub').textContent=t.sub;
+  document.getElementById('landForm').textContent=t.form;
+  document.getElementById('w2title').textContent=t.w2t;
+  document.getElementById('w2sub').textContent=t.w2s;
+  document.getElementById('w2dynamic').innerHTML=t.dyn;
+  document.getElementById('formLink').href=FORMS[TYPE];
+  const ic=document.getElementById('landIco');
+  ic.innerHTML='<svg viewBox="0 0 24 24" '+(t.fill?'fill="#fff"':'fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"')+'>'+ICONS[t.ico]+'</svg>';
+  document.getElementById('curtype').textContent=t.name;
+}
+function pick(btn){btn.parentElement.querySelectorAll('button').forEach(b=>b.classList.remove('sel-on'));btn.classList.add('sel-on');}
+function resetType(){TYPE='tecno';applyType();toast('Tipo resetado para Tecnovigilância');}
+function fakeAttach(){document.getElementById('attachLabel').textContent='✓ 1 arquivo anexado (exemplo.jpg)';}
+function val(id){const e=document.getElementById(id);return e?e.value.trim():'';}
+function toggleVal(id){const e=document.getElementById(id);if(!e)return'';const on=e.querySelector('.sel-on');return on?on.textContent.trim():'';}
+
+function finish(){
+  const t=TYPES[TYPE];
+  const email=val('f_email'), phone=val('f_phone');
+  HAS_EMAIL = !!(email||phone);
+  const detParts=[];
+  ['f_x1','f_x2','f_x3','f_x4'].forEach(id=>{const v=val(id);if(v)detParts.push(v);});
+  const x2t=toggleVal('f_x2t'); if(x2t)detParts.push(x2t);
+  const proto=genProto(TYPE), senha=genSenha();
+  const prob=2, imp=4; // pré-classificação default antes da triagem
+  const n={
+    id:String(STATE.seq++), type:TYPE, date:val('f_date')||hoje(), hora:val('f_hora')||'—',
+    setor:val('f_setor')||'—', pront:val('f_pront'), grav:val('f_grav')||'A classificar',
+    dano:toggleVal('f_dano')==='Sim', desc:val('f_desc')||'(sem descrição)', detalhe:detParts.join(' · '),
+    anexos: document.getElementById('attachLabel').textContent.startsWith('✓')?1:0,
+    anon:!HAS_EMAIL, contato:HAS_EMAIL?(email||phone):'', protocolo:proto, senha:senha,
+    status:'aberto', risco:risk(prob,imp), prob, imp, invest:null, plano:null, createdAt:val('f_date')||hoje()
+  };
+  STATE.notifs.unshift(n); LAST=n;
+  document.getElementById('doneProto').textContent=proto;
+  document.getElementById('doneSenha').textContent=senha;
+  document.getElementById('emailLine').style.display=HAS_EMAIL?'block':'none';
+  document.getElementById('doneHint').textContent=HAS_EMAIL?'Contato salvo. A equipe poderá te procurar se necessário.':'Notificação anônima — guarde em local seguro.';
+  if(HAS_EMAIL && email){const p=email.split('@');document.getElementById('emailMasked').textContent=p[0].slice(0,2)+'**@'+(p[1]||'email.com');}
+  else if(HAS_EMAIL){document.getElementById('emailMasked').textContent=phone.slice(0,2)+'***'+phone.slice(-2);}
+  // limpar campos
+  ['f_date','f_hora','f_pront','f_desc','f_email','f_phone'].forEach(id=>{const e=document.getElementById(id);if(e)e.value='';});
+  document.getElementById('attachLabel').textContent='Anexar fotos ou documentos';
+  go('done');
+}
+function hoje(){const d=new Date();return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0')+'/'+d.getFullYear();}
+function trackThis(){if(LAST){document.getElementById('t_proto').value=LAST.protocolo;document.getElementById('t_senha').value=LAST.senha;}go('track');doTrack();}
+
+function statusTimelineMini(n){
+  const cur=STATUS[n.status].step;
+  let h='<div class="stepper" style="margin:0 0 12px;font-size:9px">';
+  for(let i=1;i<=4;i++){const c=i<cur?'done':(i===cur?'act':'');h+=`<div class="st ${c}"><b>${i}</b></div>`+(i<4?`<div class="bar ${i<cur?'done':''}"></div>`:'');}
+  h+='</div>'; return h;
+}
+function doTrack(){
+  const p=val('t_proto').replace(/\s/g,''), s=val('t_senha');
+  const box=document.getElementById('statusBox');
+  const n=STATE.notifs.find(x=>x.protocolo.toLowerCase()===p.toLowerCase());
+  if(!n||(s && n.senha!==s && s!=='')){ box.innerHTML='<div class="card-soft" style="border-color:#f1bcd2"><p style="margin:0;color:#a82654;font-size:12.5px">Protocolo ou senha não encontrados. Confira os dados informados na conclusão.</p></div>'; return; }
+  const st=STATUS[n.status];
+  box.innerHTML=`<div class="card-soft">
+    <h4 style="margin-bottom:8px">${n.protocolo}</h4>
+    ${statusTimelineMini(n)}
+    <p style="margin:0 0 6px">${tg(st.label,st.cls)} &nbsp; ${rtg(n.risco)}</p>
+    <p style="margin:0;font-size:12px;color:var(--muted)">${TYPES[n.type].name} · aberta em ${n.createdAt}. ${n.status==='concluido'?'Investigação concluída e plano de ação registrado.':'Em tratamento pelo NSP — sem necessidade de ação sua.'}</p>
+  </div>`;
+}
+
+/* ============================================================
+   NAVEGAÇÃO
+   ============================================================ */
+const MOBILE=['selector','landing','w1','w2','w3','w4','done','track','login'];
+const ADMIN=['painel','lista','triagem','invest','plano','indic','indicForm'];
+const ADMIN_META={
+  painel:['Painel','Visão geral do Núcleo de Segurança do Paciente','nsp.hu-uem.br/painel'],
+  lista:['Notificações','Lista geral · todos os tipos','nsp.hu-uem.br/notificacoes'],
+  triagem:['Triagem & classificação','Análise, reclassificação e matriz de risco','nsp.hu-uem.br/triagem'],
+  invest:['Investigação','FOR-NSP-014 · análise de causa raiz','nsp.hu-uem.br/investigacao'],
+  plano:['Plano de ação 5W2H','SGQ-001 · medidas mitigadoras','nsp.hu-uem.br/plano-acao'],
+  indic:['Indicadores & BI','Formulários de indicadores e exportação','nsp.hu-uem.br/indicadores'],
+  indicForm:['Indicadores — Farmacovigilância','Formulários de notificação e relatórios para o órgão fiscal','nsp.hu-uem.br/indicadores/farmaco']
+};
+function go(id){
+  const phone=document.getElementById('phone'), browser=document.getElementById('browser');
+  if(MOBILE.includes(id)){
+    browser.style.display='none'; phone.style.display='block';
+    document.querySelectorAll('.phone .scr').forEach(s=>s.classList.remove('show'));
+    document.getElementById('s-'+id).classList.add('show');
+    document.querySelector('.phone .top').style.display=(id==='selector')?'none':'block';
+  } else if(ADMIN.includes(id)){
+    phone.style.display='none'; browser.style.display='block';
+    if(id==='painel')renderPainel();
+    if(id==='lista')renderLista();
+    if(id==='triagem')renderTriagem();
+    if(id==='invest')renderInvest();
+    if(id==='plano')renderPlano();
+    if(id==='indic')renderIndic();
+    if(id==='indicForm')renderIndicForm();
+    document.querySelectorAll('.ascr').forEach(s=>s.classList.remove('show'));
+    document.getElementById('a-'+id).classList.add('show');
+    const m=ADMIN_META[id];
+    document.getElementById('adminTitle').textContent=m[0];
+    document.getElementById('adminCrumb').textContent=m[1];
+    document.getElementById('urlbar').textContent=m[2];
+    const ex=document.getElementById('topbarExtra');
+    const aguardando=STATE.notifs.filter(n=>n.status==='aberto'||n.status==='triagem').length;
+    if(id==='triagem') ex.innerHTML=`<span class="alertpill">⚠ ${aguardando} aguardando triagem</span>`;
+    else if(id==='lista') ex.innerHTML='<button class="bmd dark" style="padding:8px 15px" onclick="toast(\'Lista exportada (.xlsx)\')">Exportar lista</button>';
+    else ex.innerHTML='';
+    document.querySelectorAll('.side nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('data-go')===id||(id==='indicForm'&&a.getAttribute('data-go')==='indic')));
+  }
+  document.querySelectorAll('.rail a[data-go]').forEach(a=>a.classList.toggle('on',a.getAttribute('data-go')===id));
+  document.querySelector('.rail')?.classList.remove('open');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+/* ============================================================
+   PAINEL
+   ============================================================ */
+function counts(){
+  const c={aberto:0,triagem:0,investigacao:0,plano:0,concluido:0};
+  STATE.notifs.forEach(n=>c[n.status]++);
+  return c;
+}
+function renderPainel(){
+  const c=counts();
+  const backlog=c.aberto+c.triagem+c.investigacao+c.plano;
+  const novas=STATE.notifs.filter(n=>n.createdAt===hoje()).length;
+  const el=document.getElementById('a-painel');
+  el.innerHTML=`
+    <div class="kpis">
+      <div class="kpi ${backlog>40?'alert':''}"><div class="stripe" style="background:#c0392b"></div><div class="lab">Backlog (em aberto)</div><div class="val">${backlog}</div><div class="delta" style="color:#c0392b">inclui pendências de anos anteriores</div></div>
+      <div class="kpi"><div class="stripe" style="background:#2f80d6"></div><div class="lab">Novas (sessão)</div><div class="val">${novas}</div><div class="delta" style="color:var(--muted)">via QR Code</div></div>
+      <div class="kpi"><div class="stripe" style="background:#6b4fc0"></div><div class="lab">Em investigação</div><div class="val">${c.investigacao}</div><div class="delta" style="color:var(--muted)">FOR-NSP-014</div></div>
+      <div class="kpi"><div class="stripe" style="background:#dd6f1e"></div><div class="lab">Plano em execução</div><div class="val">${c.plano}</div><div class="delta" style="color:var(--muted)">5W2H · SGQ-001</div></div>
+      <div class="kpi"><div class="stripe" style="background:#4e9c3e"></div><div class="lab">Concluídas</div><div class="val">${c.concluido}</div><div class="delta" style="color:var(--r-baixo-fg)">↑ taxa de resolução</div></div>
+    </div>
+    <div class="note">Antes: o revisor orquestrava <b>6 planilhas separadas</b> manualmente. Aqui a notificação entra pelo QR e percorre um fluxo único — triagem → investigação → plano de ação → indicadores — sem reentrada de dados.</div>
+    <div class="panel" style="margin-bottom:18px">
+      <h3 style="margin-bottom:14px">Notificações por etapa do fluxo</h3>
+      <div class="stepper" style="margin:0">
+        ${[['aberto','Abertura',c.aberto],['triagem','Triagem',c.triagem],['investigacao','Investigação',c.investigacao],['plano','Plano de ação',c.plano],['concluido','Concluído',c.concluido]].map((s,i,arr)=>{
+          const cls=s[0]==='concluido'?'done':(s[2]>0?'act':'');
+          return `<div class="st ${cls}"><b>${i+1}</b>${s[1]}<br><small style="color:var(--muted)">${s[2]}</small></div>`+(i<arr.length-1?'<div class="bar"></div>':'');
+        }).join('')}
+      </div>
+    </div>
+    <div class="panel" style="margin-bottom:0">
+      <h3 style="margin-bottom:6px">Distribuição por tipo</h3>
+      <div class="pmeta" style="margin-bottom:14px">Base para os relatórios de BI enviados à ANVISA / Sentinela</div>
+      ${barChart()}
+    </div>`;
+}
+function barChart(){
+  const by={};Object.keys(TYPES).forEach(k=>by[k]=0);
+  STATE.notifs.forEach(n=>by[n.type]++);
+  const max=Math.max(1,...Object.values(by));
+  return '<div style="display:flex;flex-direction:column;gap:10px">'+Object.keys(TYPES).map(k=>{
+    const t=TYPES[k],v=by[k],w=Math.round(v/max*100);
+    return `<div style="display:flex;align-items:center;gap:12px">
+      <div style="flex:0 0 150px;font-size:12.5px;color:#3a352f">${t.name}</div>
+      <div style="flex:1;background:#f0ece4;border-radius:7px;height:22px;overflow:hidden"><div style="width:${w}%;height:100%;background:${t.col};border-radius:7px;transition:width .4s"></div></div>
+      <div style="flex:0 0 28px;text-align:right;font-weight:700;font-size:13px;color:#23201c">${v}</div>
+    </div>`;
+  }).join('')+'</div>';
+}
+
+/* ============================================================
+   LISTA + filtros
+   ============================================================ */
+function setFilter(s){filters.status=s;renderLista();}
+function renderLista(){
+  const el=document.getElementById('a-lista');
+  const chips=[['todas','Todas'],['aberto','Aberto'],['triagem','Em triagem'],['investigacao','Investigação'],['plano','Plano'],['concluido','Concluído'],['dup','⚠ Duplicatas']];
+  let rows=STATE.notifs.slice();
+  if(filters.status==='dup') rows=rows.filter(n=>n.pront&&dupCount(n.pront)>1);
+  else if(filters.status!=='todas') rows=rows.filter(n=>n.status===filters.status);
+  if(filters.q){const q=filters.q.toLowerCase();rows=rows.filter(n=>(n.pront||'').toLowerCase().includes(q)||(n.grav||'').toLowerCase().includes(q)||(n.desc||'').toLowerCase().includes(q)||n.protocolo.toLowerCase().includes(q)||TYPES[n.type].name.toLowerCase().includes(q));}
+  const backlogAntigo=STATE.notifs.filter(n=>n.status!=='concluido').length;
+  el.innerHTML=`
+    <div class="fbar">
+      <div class="chips">${chips.map(c=>`<button class="chip ${filters.status===c[0]?'on':''}" onclick="setFilter('${c[0]}')">${c[1]}</button>`).join('')}</div>
+      <input class="search" id="listSearch" placeholder="Buscar por prontuário, classificação, texto…" value="${esc(filters.q)}" oninput="filters.q=this.value;renderLista();document.getElementById('listSearch').focus()">
+    </div>
+    <table class="list">
+      <thead><tr><th>#</th><th>Tipo</th><th>Data</th><th>Setor</th><th>Prontuário</th><th>Risco</th><th>Status</th><th></th></tr></thead>
+      <tbody>${rows.length?rows.map(rowHTML).join(''):`<tr><td colspan="8" class="empty">Nenhuma notificação para este filtro.</td></tr>`}</tbody>
+    </table>
+    <div class="pag"><span>Exibindo ${rows.length} de ${STATE.notifs.length} · <b style="color:#c0392b">${backlogAntigo} em aberto</b></span>
+      <div class="pages"><button>‹</button><button class="on">1</button><button>›</button></div></div>
+    <div class="legend">
+      <span><i style="background:var(--r-baixo)"></i>Baixo</span><span><i style="background:var(--r-medio)"></i>Médio</span>
+      <span><i style="background:var(--r-alto)"></i>Alto</span><span><i style="background:var(--r-extremo)"></i>Extremo</span>
+      <span style="color:#b1571a">⚠ Linha destacada = duplicata provável por prontuário</span>
+    </div>`;
+}
+function rowHTML(n){
+  const st=STATUS[n.status], dup=n.pront&&dupCount(n.pront)>1;
+  const action = n.status==='aberto'?`<span class="linkbtn" onclick="openTriagem('${n.id}')">Triar →</span>`
+    : n.status==='triagem'?`<span class="linkbtn" onclick="openTriagem('${n.id}')">Classificar →</span>`
+    : n.status==='investigacao'?`<span class="linkbtn" onclick="openInvest('${n.id}')">Investigar →</span>`
+    : n.status==='plano'?`<span class="linkbtn" onclick="openPlano('${n.id}')">Plano →</span>`
+    : `<span class="linkbtn" onclick="openInvest('${n.id}')">Ver</span>`;
+  return `<tr class="${dup?'dup':''}">
+    <td class="num">${n.id}</td><td>${typeBadge(n.type)}</td><td>${n.date.slice(0,5)}</td><td>${esc(n.setor)}</td>
+    <td>${n.pront?esc(n.pront):'—'}${dup?`<span class="dupflag">${dupCount(n.pront)} c/ mesmo prontuário</span>`:''}</td>
+    <td>${rtg(n.risco)}</td><td>${tg(st.label,st.cls)}</td><td>${action}</td></tr>`;
+}
+
+/* ============================================================
+   TRIAGEM + matriz de risco
+   ============================================================ */
+function openTriagem(id){SEL=id;go('triagem');}
+function renderTriagem(){
+  const el=document.getElementById('a-triagem');
+  if(!find(SEL)||!['aberto','triagem'].includes(find(SEL).status))
+    SEL=(STATE.notifs.find(n=>n.status==='aberto'||n.status==='triagem')||STATE.notifs[0])?.id;
+  const n=find(SEL);
+  if(!n){el.innerHTML='<div class="empty">Selecione uma notificação na lista.</div>';return;}
+  const t=TYPES[n.type];
+  el.innerHTML=`
+    <div class="tcard" style="border-left-color:${t.col}">
+      <div><h3>Notif. #${n.id} — ${t.name}</h3>
+        <div class="meta">${n.date} · ${n.anon?'Anônimo':'Contato vinculado'} · ${esc(n.setor)} · pré-classificada como “${esc(n.grav)}”${n.detalhe?' · '+esc(n.detalhe):''}</div>
+        <p>${esc(n.desc)}</p></div>
+      <div class="acts">
+        <select class="seldd" id="reclassGrav"><option>Reclassificar gravidade…</option><option>Near miss (quase erro)</option><option>Incidente sem dano</option><option>Dano leve</option><option>Dano moderado</option><option>Dano grave</option><option>Óbito</option></select>
+        <button class="bsm warn" onclick="advanceInvest('${n.id}')">Iniciar investigação →</button>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Classificação de risco — Matriz Probabilidade × Impacto</h3>
+      <div class="pmeta">Base_Classificação (planilha SGQ) · ANVISA. Clique numa célula para reclassificar.</div>
+      <div class="rm-wrap" style="margin-top:16px">
+        <div>
+          <table class="rmatrix" id="rmatrix"><tr><td></td><th colspan="5" style="padding-bottom:8px">IMPACTO →</th></tr></table>
+          <div style="display:flex;margin-left:74px;margin-top:4px">
+            ${IMP.map(i=>`<span style="flex:1;text-align:center;font-size:10px;color:var(--muted);width:62px">${i[0]}</span>`).join('')}
+          </div>
+        </div>
+        <div class="rm-out">
+          <div class="dlabel" style="margin-top:0">Resultado</div>
+          <div class="card-soft" style="border-color:var(--line)">
+            <div style="font-size:11.5px;color:var(--muted)">Probabilidade × Impacto</div>
+            <div class="big" id="rmCombo" style="color:#23201c">—</div>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:8px">Pontuação</div>
+            <div class="big" id="rmScore" style="color:#23201c">—</div>
+            <div style="font-size:11.5px;color:var(--muted);margin-top:8px">Nível do risco</div>
+            <div class="tg" id="rmLevel" style="font-size:14px;margin-top:4px">—</div>
+          </div>
+          <button class="bmd dark" style="width:100%;margin-top:12px" onclick="applyRisk('${n.id}')">Aplicar reclassificação</button>
+          <p style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.5">Risco <b>Alto/Extremo</b> dispara alerta automático ao parecerista.</p>
+        </div>
+      </div>
+    </div>`;
+  buildMatrix(n.prob,n.imp);
+}
+let RM={prob:null,imp:null};
+function buildMatrix(selP,selI){
+  const tbl=document.getElementById('rmatrix'); if(!tbl)return;
+  PROB.forEach(([pn,pv])=>{
+    const tr=document.createElement('tr');
+    const yl=document.createElement('td');yl.style.cssText='font-size:10px;color:var(--muted);font-weight:700;padding-right:6px;text-align:right;white-space:nowrap';yl.textContent=pn;tr.appendChild(yl);
+    IMP.forEach(([inm,iv])=>{
+      const s=pv*iv,[lvl,key]=riskLevel(s);
+      const td=document.createElement('td');
+      const cell=document.createElement('div');cell.className='cell';
+      cell.style.background=getComputedStyle(document.documentElement).getPropertyValue('--r-'+key).trim();
+      cell.textContent=s;cell.title=pn+' × '+inm+' = '+lvl;
+      cell.onclick=()=>selectCell(cell,pn,pv,inm,iv,s,lvl,key);
+      td.appendChild(cell);tr.appendChild(td);
+      if(pv===selP&&iv===selI)setTimeout(()=>selectCell(cell,pn,pv,inm,iv,s,lvl,key),0);
+    });
+    tbl.appendChild(tr);
+  });
+}
+function selectCell(cell,pn,pv,inm,iv,s,lvl,key){
+  document.querySelectorAll('.rmatrix .cell').forEach(c=>c.classList.remove('sel'));cell.classList.add('sel');
+  RM={prob:pv,imp:iv};
+  document.getElementById('rmCombo').textContent=pn+' × '+inm;
+  document.getElementById('rmScore').textContent=s;
+  const lg=document.getElementById('rmLevel');lg.textContent=lvl;
+  lg.style.background='var(--r-'+key+'-bg)';lg.style.color='var(--r-'+key+'-fg)';
+}
+function applyRisk(id){
+  const n=find(id);if(!n||RM.prob==null)return;
+  n.prob=RM.prob;n.imp=RM.imp;n.risco=risk(RM.prob,RM.imp);
+  const g=document.getElementById('reclassGrav'); if(g&&g.selectedIndex>0)n.grav=g.value;
+  if(n.status==='aberto')n.status='triagem';
+  toast(`Risco reclassificado: ${n.risco.level} (registrado no histórico) `+(n.risco.level==='Alto'||n.risco.level==='Extremo'?'· alerta enviado ao parecerista':''));
+  renderTriagem();
+}
+function advanceInvest(id){const n=find(id);if(!n)return;if(!n.invest)n.invest=defaultInvest(n);n.status='investigacao';SEL=id;toast('Notificação enviada para investigação (FOR-NSP-014)');openInvest(id);}
+
+/* ============================================================
+   INVESTIGAÇÃO (FOR-NSP-014)
+   ============================================================ */
+function openInvest(id){SEL=id;go('invest');}
+function renderInvest(){
+  const el=document.getElementById('a-invest');
+  if(!find(SEL)||!find(SEL).invest)
+    SEL=(STATE.notifs.find(n=>n.status==='investigacao')||STATE.notifs.find(n=>n.invest)||STATE.notifs[0])?.id;
+  const n=find(SEL);
+  if(!n){el.innerHTML='<div class="empty">Selecione uma notificação para investigar.</div>';return;}
+  if(!n.invest)n.invest=defaultInvest(n);
+  const iv=n.invest,t=TYPES[n.type],cur=STATUS[n.status].step;
+  el.innerHTML=`
+  <div class="panel">
+    <h3>Investigação e Análise de Incidente</h3>
+    <div class="pmeta">FOR-NSP-014-2026 · Notif. #${n.id} — ${t.name} · Prontuário ${n.pront||'—'} · Risco ${n.risco.level}</div>
+    <div class="stepper" style="margin-top:14px">${STEP_LABELS.map((l,i)=>{const c=(i+1)<cur?'done':((i+1)===cur?'act':'');return `<div class="st ${c}"><b>${i+1}</b>${l}</div>`+(i<4?`<div class="bar ${(i+1)<cur?'done':''}"></div>`:'');}).join('')}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px">
+      <div><div class="dlabel" style="margin-top:0">NEA / parecerista</div><input class="dinput" value="${esc(iv.nea)}"></div>
+      <div><div class="dlabel" style="margin-top:0">Data da investigação</div><input class="dinput" value="${esc(iv.data)}"></div>
+      <div><div class="dlabel" style="margin-top:0">Fontes de informação</div><input class="dinput" value="${esc(iv.fontes)}"></div>
+    </div>
+    <div class="sec-title"><span class="n">A</span> Timeline do incidente</div>
+    <div class="tl">${iv.timeline.map(e=>`<div class="ev"><div class="when">${esc(e[0])}</div><div class="what">${esc(e[1])}</div></div>`).join('')}<div class="ev add" onclick="toast('Novo marco adicionado à timeline')">+ marco</div></div>
+    <div class="sec-title"><span class="n">B</span> Fatores contribuintes <span style="font-weight:500;text-transform:none;letter-spacing:0;color:var(--muted);font-size:11px">· Protocolo de Londres</span></div>
+    <div class="cfgrid">
+      <div class="cf cf-prof"><div class="h">Profissional — cognitivos / desempenho / comportamento</div><textarea>${esc(iv.fatores.prof)}</textarea></div>
+      <div class="cf cf-com"><div class="h">Comunicação</div><textarea>${esc(iv.fatores.com)}</textarea></div>
+      <div class="cf cf-pac"><div class="h">Dirigidos ao paciente / acompanhante</div><textarea>${esc(iv.fatores.pac)}</textarea></div>
+      <div class="cf cf-amb"><div class="h">Trabalho / ambiente</div><textarea>${esc(iv.fatores.amb)}</textarea></div>
+      <div class="cf cf-org"><div class="h">Organizacionais</div><textarea>${esc(iv.fatores.org)}</textarea></div>
+      <div class="cf cf-ext"><div class="h">Externos</div><textarea>${esc(iv.fatores.ext)}</textarea></div>
+    </div>
+    <div class="sec-title"><span class="n">C</span> Análise de causa raiz — 5 Porquês</div>
+    <div class="whys">
+      ${['1º Por quê?|Sintoma','2º Por quê?|','3º Por quê?|','4º Por quê?|Causa','5º Por quê?|Causa raiz'].map((l,i)=>{const[a,b]=l.split('|');return `<div class="why"><span class="lbl">${a}${b?`<small>${b}</small>`:''}</span><input value="${esc(iv.whys[i]||'')}"></div>`;}).join('')}
+    </div>
+    <div class="sec-title"><span class="n">D</span> Detecção e fatores atenuantes</div>
+    <div class="row2">
+      <div><div class="dlabel" style="margin-top:0">Como foi identificado</div><textarea class="dinput">${esc(iv.deteccao)}</textarea></div>
+      <div><div class="dlabel" style="margin-top:0">Fatores atenuantes aplicados</div><textarea class="dinput">${esc(iv.atenuantes)}</textarea></div>
+    </div>
+    <div class="dlabel">Parecer e conclusão do NSP</div>
+    <textarea class="dinput">${esc(iv.parecer)}</textarea>
+    <div class="foot">
+      <button class="bmd" onclick="toast('Rascunho salvo')">Salvar rascunho</button>
+      ${n.status==='investigacao'
+        ? `<button class="bmd blue" onclick="genPlano('${n.id}')">Gerar plano de ação a partir da causa raiz →</button>`
+        : `<button class="bmd dark" onclick="openPlano('${n.id}')">Ver plano de ação →</button>`}
+    </div>
+  </div>`;
+}
+function genPlano(id){const n=find(id);if(!n)return;if(!n.plano)n.plano=defaultPlano(n);n.status='plano';SEL=id;toast('Plano de ação gerado a partir da causa raiz identificada');openPlano(id);}
+
+/* ============================================================
+   PLANO DE AÇÃO 5W2H (SGQ-001)
+   ============================================================ */
+const PSTAT={iniciar:['A iniciar','#f3f0ea','var(--muted)'],andamento:['Em andamento','#eaf2fc','#2f80d6'],atrasado:['Atrasado','#fbe6d6','#b1571a'],paralisado:['Paralisado','#efece6','#6b6258'],concluido:['Concluído','var(--s-concl-bg)','var(--s-concl-fg)'],cancelado:['Cancelado','#f1ece6','#9a948a']};
+function openPlano(id){SEL=id;go('plano');}
+function renderPlano(){
+  const el=document.getElementById('a-plano');
+  if(!find(SEL)||!find(SEL).plano)
+    SEL=(STATE.notifs.find(n=>n.status==='plano'&&n.plano)||STATE.notifs.find(n=>n.plano))?.id;
+  const n=find(SEL);
+  if(!n||!n.plano){el.innerHTML='<div class="empty">Nenhum plano de ação gerado ainda. Conclua uma investigação para gerar.</div>';return;}
+  const p=n.plano, t=TYPES[n.type];
+  const cnt={iniciar:0,andamento:0,atrasado:0,paralisado:0,concluido:0,cancelado:0};p.forEach(a=>cnt[a.status]++);
+  const allDone=p.every(a=>a.status==='concluido'||a.status==='cancelado');
+  el.innerHTML=`
+    <div class="note">Plano gerado a partir da <b>investigação #${n.id}</b> (${t.name}). A causa raiz vira o “Por quê?” das ações. Concluir todas as ações fecha a notificação e alimenta os indicadores.</div>
+    <div class="stbar">
+      ${[['iniciar','A iniciar','var(--muted)'],['andamento','Em andamento','#2f80d6'],['atrasado','Atrasado','#dd6f1e'],['paralisado','Paralisado','var(--muted)'],['concluido','Concluído','#4e9c3e'],['cancelado','Cancelado','var(--muted)']].map(s=>`<div class="stbox"><div class="n" style="color:${s[2]}">${cnt[s[0]]}</div><div class="l">${s[1]}</div></div>`).join('')}
+      <div class="stbox"><div class="n" style="color:#23201c">${p.length}</div><div class="l">Total</div></div>
+    </div>
+    <div style="overflow-x:auto"><table class="w5tab">
+      <thead><tr><th>Cód</th><th>O quê?</th><th>Quem?</th><th>Onde?</th><th>Por quê? (causa raiz)</th><th>Como?</th><th>Quanto?</th><th>Quando</th><th>Status</th><th>Evidência</th></tr></thead>
+      <tbody>${p.map((a,i)=>`<tr>
+        <td class="cod">${a.cod}</td><td>${esc(a.oque)}</td><td>${esc(a.quem)}</td><td>${esc(a.onde)}</td>
+        <td>${esc(a.porque)}</td><td>${esc(a.como)}</td><td>${esc(a.quanto)}</td><td>${a.ini} → ${a.fim}</td>
+        <td><select class="seldd" style="padding:5px 9px;font-size:11.5px" onchange="setPstat('${n.id}',${i},this.value)">${Object.keys(PSTAT).map(k=>`<option value="${k}" ${a.status===k?'selected':''}>${PSTAT[k][0]}</option>`).join('')}</select></td>
+        <td style="min-width:120px"><input class="dinput" style="padding:7px 9px;font-size:12px" value="${esc(a.ev)}" placeholder="—" onchange="setPev('${n.id}',${i},this.value)"></td>
+      </tr>`).join('')}</tbody>
+    </table></div>
+    <div class="sec-title" style="color:var(--c-d)"><span class="n">▦</span> Matriz Esforço × Impacto</div>
+    <div class="eim">
+      <div class="q" style="background:#4e9c3e">Alto impacto · baixo esforço<small>Ganhos rápidos — priorizar</small><span class="pin">1.0 · 3.0</span></div>
+      <div class="q" style="background:#c89a1f">Alto impacto · alto esforço<small>Projetos estratégicos</small></div>
+      <div class="q" style="background:#a9a399">Baixo impacto · baixo esforço<small>Preencher tempo</small><span class="pin">2.0</span></div>
+      <div class="q" style="background:#c0392b">Baixo impacto · alto esforço<small>Evitar / repensar</small></div>
+    </div>
+    <div class="foot">
+      <button class="bmd" onclick="addAction('${n.id}')">+ Adicionar ação</button>
+      <button class="bmd" onclick="toast('Plano exportado (.xlsx)')">Exportar (.xlsx)</button>
+      <button class="bmd ${allDone?'dark':''}" ${allDone?'':'style="opacity:.5;cursor:not-allowed"'} onclick="${allDone?`concludeNotif('${n.id}')`:`toast('Conclua ou cancele todas as ações para fechar a notificação')`}">Concluir notificação</button>
+    </div>`;
+}
+function setPstat(id,i,v){const n=find(id);n.plano[i].status=v;renderPlano();}
+function setPev(id,i,v){const n=find(id);n.plano[i].ev=v;}
+function addAction(id){const n=find(id);n.plano.push({cod:(n.plano.length+1)+'.0',oque:'Nova ação',quem:'',onde:n.setor,porque:n.invest?.whys[4]||'',como:'',quanto:'R$ 0,00',ini:'—',fim:'—',status:'iniciar',ev:''});renderPlano();}
+function concludeNotif(id){const n=find(id);n.status='concluido';toast('Notificação concluída · status atualizado · indicadores alimentados');renderPlano();}
+
+/* ============================================================
+   INDICADORES & BI
+   ============================================================ */
+const INDS=[
+  ['Boas Práticas c/ Medicamentos','#bcd8f4','#eaf2fc','#2f80d6','Mensal'],
+  ['Cirurgia Segura','#c8e3a8','#eef5e3','#4e9c3e','Mensal'],
+  ['Identificação Segura','#f3d28a','#faf1dd','#b07a1c','Mensal'],
+  ['Dispensação Segura','#f1bcd2','#fce9f0','#d6336c','Mensal'],
+  ['Prevenção LPP e Quedas','#f2c3a3','#fbeee6','#dd6f1e','Mensal'],
+  ['Medicação Segura','#c8e3a8','#eef5e3','#4e9c3e','Mensal'],
+  ['Passagem de Plantão','#dcd8d0','#efece6','#4a4742','Por turno']
+];
+function renderIndic(){
+  const el=document.getElementById('a-indic');
+  el.innerHTML=`
+    <div class="note">Cada indicador abre o <b>formulário oficial (Google Forms)</b> usado hoje pelo HU. As respostas alimentam o BI — aqui o painel consolida tudo num só lugar, sem orquestração manual.</div>
+    <div class="icards">
+      ${INDS.map(([n,c,soft,fg,freq])=>`<div class="ic" style="--ic:${c};--ic-soft:${soft};--ic-fg:${fg}"><div class="ich">${n}</div><div class="icm">Coleta: ${freq}</div><div class="icb"><a onclick="go('indicForm')">→ Relatórios</a><span class="ext"><a href="${IND_FORM}" target="_blank" rel="noopener">Form ↗</a></span></div></div>`).join('')}
+      <div class="ic wide"><div class="ich">Exportação de relatórios</div><div class="icb">Dentro de cada indicador você pode:<br>• Exportar para o órgão fiscal (ANVISA / Sentinela)<br>• Baixar o arquivo (.xlsx / .pdf)<br>• Enviar para Google Sheets → BI (gráficos automáticos)</div></div>
+    </div>
+    <div class="panel" style="margin-top:18px;margin-bottom:0"><h3 style="margin-bottom:6px">Notificações por tipo (BI)</h3><div class="pmeta" style="margin-bottom:14px">Atualizado em tempo real conforme as notificações entram</div>${barChart()}</div>`;
+}
+function renderIndicForm(){
+  const el=document.getElementById('a-indicForm');
+  el.innerHTML=`
+    <div class="tabs"><button class="on">Lista de formulários</button><button onclick="window.open('${IND_FORM}','_blank')">Novo formulário ↗</button></div>
+    <div class="barx"><b style="font-size:13.5px">4 formulários salvos</b>
+      <div style="display:flex;gap:9px;align-items:center"><span class="seldd">Todos os períodos ▾</span><span class="seldd">Farmacovigilância ▾</span>
+        <button class="bmd dark" style="padding:8px 15px" onclick="window.open('${IND_FORM}','_blank')">+ Novo formulário</button></div></div>
+    <table class="list">
+      <thead><tr><th>Formulário</th><th>Período</th><th>Criado em</th><th>Status</th><th>Ações</th></tr></thead>
+      <tbody>
+        ${[['Cirurgia Segura','Jan 2026','03/02/2026','Exportado','concl'],['Medicação Segura','Fev 2026','04/03/2026','Rascunho','medio'],['Identificação Segura','Mar 2026','01/04/2026','Em edição','aberto'],['Boas Práticas c/ Medicamentos','Abr 2026','—','Rascunho','medio']].map(r=>{
+          const bg=r[4]==='medio'?'var(--r-medio-bg)':`var(--s-${r[4]}-bg)`,fg=r[4]==='medio'?'var(--r-medio-fg)':`var(--s-${r[4]}-fg)`;
+          return `<tr><td><b>${r[0]}</b><br><span style="font-size:11.5px;color:var(--muted)">Farmacovigilância — ${r[1]}</span></td><td>${r[1]}</td><td>${r[2]}</td><td><span class="tg" style="background:${bg};color:${fg}">${r[3]}</span></td><td><button class="bsm" onclick="toast('Arquivo baixado (.xlsx)')">⬇ .xlsx</button> <button class="bsm" onclick="toast('Enviado ao Google Sheets / BI')">↗ Sheets/BI</button> <button class="bsm" onclick="toast('Relatório enviado à ANVISA / Sentinela')">✉ ANVISA</button></td></tr>`;
+        }).join('')}
+      </tbody>
+    </table>
+    <div class="pag"><span>Exibindo 4 de 4 formulários</span><div class="pages"><button>‹</button><button class="on">1</button><button>›</button></div></div>`;
+}
+
+/* ---- toast ---- */
+let tT;function toast(m){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');clearTimeout(tT);tT=setTimeout(()=>e.classList.remove('show'),2600);}
+
+/* ---- eventos globais ---- */
+document.addEventListener('click',e=>{
+  const pk=e.target.closest('[data-pick]'); if(pk){TYPE=pk.getAttribute('data-pick');applyType();go('landing');return;}
+  const g=e.target.closest('[data-go]'); if(g){go(g.getAttribute('data-go'));}
+});
+
+/* ---- init ---- */
+seedReset(); applyType(); go('selector');
+</script>
+</body></html>
