@@ -1,19 +1,28 @@
-<?page title="Gerenciador de Notificações de Hospital"?>
-<zk xmlns="http://www.zkoss.org/2005/zul">
-    <window title="Gerenciador de Notificações de Hospital" border="normal" width="550px"
-            apply="br.com.hospital.notificacao.NotificacaoController">
-        <vlayout>
-            <hlayout>
-                <textbox id="txtMensagem" placeholder="Nova notificação" width="350px" />
-                <button id="btnAdicionar" label="Adicionar" />
-            </hlayout>
-            <listbox id="listNotificacoes" width="550px" mold="paging" pageSize="10">
-                <listhead>
-                    <listheader label="ID" width="60px" />
-                    <listheader label="Mensagem" />
-                    <listheader label="Data" width="180px" />
-                </listhead>
-            </listbox>
-        </vlayout>
+<?page title="NSP HU/UEM · Canal de Notificações"?>
+<?meta name="viewport" content="width=device-width, initial-scale=1.0"?>
+<?link rel="stylesheet" type="text/css" href="/css/nsp.css"?>
+<zk xmlns="http://www.zkoss.org/2005/zul" xmlns:h="http://www.w3.org/1999/xhtml">
+    <window border="none" apply="br.com.hospital.notificacao.web.SeletorComposer">
+        <h:div class="nsp-phone t-admin">
+            <h:div class="nsp-top">
+                <h:div class="nsp-brand">⬢ HU-UEM · NSP</h:div>
+            </h:div>
+            <h:div class="nsp-body">
+                <label sclass="nsp-stepcap" value="Canal de notificações"/>
+                <label sclass="nsp-title" style="font-size:17px" value="Segurança do Paciente"/>
+                <label sclass="nsp-sub" value="5 QR Codes distribuídos pelo hospital — 4 para profissionais e 1 para pacientes e acompanhantes."/>
+
+                <h:div class="nsp-grouplbl">Profissionais (4 acessos)</h:div>
+                <div id="gridProfissionais"/>
+
+                <h:div class="nsp-grouplbl">Pacientes e acompanhantes (1 acesso)</h:div>
+                <div id="gridPaciente"/>
+
+                <h:div style="margin-top:18px;display:flex;flex-direction:column;gap:9px">
+                    <button id="btnAcompanhar" label="Acompanhar protocolo" width="100%"/>
+                    <button id="btnLogin" label="Acesso administrativo" width="100%"/>
+                </h:div>
+            </h:div>
+        </h:div>
     </window>
 </zk>

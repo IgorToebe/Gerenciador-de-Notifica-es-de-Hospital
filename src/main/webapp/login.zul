@@ -1,0 +1,28 @@
+<?page title="Acesso Administrativo · NSP HU/UEM"?>
+<?meta name="viewport" content="width=device-width, initial-scale=1.0"?>
+<?link rel="stylesheet" type="text/css" href="/css/nsp.css"?>
+<zk xmlns="http://www.zkoss.org/2005/zul" xmlns:h="http://www.w3.org/1999/xhtml">
+    <window border="none" apply="br.com.hospital.notificacao.web.LoginComposer">
+        <div sclass="nsp-phone t-admin">
+            <h:div class="nsp-top">
+                <h:div class="nsp-brand">⬢ HU-UEM · NSP</h:div>
+            </h:div>
+            <h:div class="nsp-body">
+                <div sclass="nsp-badge-ico" style="background:#4a4742">
+                    <label style="color:#fff;font-size:24px" value="🔐"/>
+                </div>
+                <label sclass="nsp-title" style="font-size:18px" value="Acesso administrativo"/>
+                <label sclass="nsp-sub" value="Núcleo de Segurança do Paciente" style="display:block;margin-bottom:8px"/>
+
+                <label sclass="nsp-field-label" style="margin-top:8px" value="Login institucional"/>
+                <textbox id="txtLogin" width="100%"/>
+                <label sclass="nsp-field-label" style="margin-top:10px" value="Senha"/>
+                <textbox id="txtSenha" type="password" width="100%"/>
+                <label id="lblErro" style="color:#a82654;font-size:12px;margin-top:8px;display:block"/>
+
+                <button id="btnEntrar" label="Entrar" width="100%" style="margin-top:16px"/>
+                <label sclass="nsp-lawnote" value="* Acesso restrito à equipe da Qualidade" style="display:block"/>
+            </h:div>
+        </div>
+    </window>
+</zk>

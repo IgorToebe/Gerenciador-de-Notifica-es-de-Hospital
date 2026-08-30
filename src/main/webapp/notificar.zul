@@ -1,0 +1,154 @@
+<?page title="Nova Notificação · NSP HU/UEM"?>
+<?meta name="viewport" content="width=device-width, initial-scale=1.0"?>
+<?link rel="stylesheet" type="text/css" href="/css/nsp.css"?>
+<zk xmlns="http://www.zkoss.org/2005/zul" xmlns:h="http://www.w3.org/1999/xhtml">
+    <window id="win" border="none" apply="br.com.hospital.notificacao.web.WizardComposer">
+        <div id="shell" sclass="nsp-phone">
+            <h:div class="nsp-top">
+                <h:div class="nsp-brand">⬢ HU-UEM · NSP</h:div>
+            </h:div>
+            <h:div class="nsp-body">
+
+                <!-- Passo 1 · Sigilo -->
+                <vlayout id="passo1">
+                    <h:div class="nsp-steps"><h:i class="done"/><h:i/><h:i/><h:i/></h:div>
+                    <label sclass="nsp-stepcap" value="Passo 1 de 4"/>
+                    <label sclass="nsp-title" style="font-size:17px" value="Compromisso com o sigilo"/>
+                    <label sclass="nsp-sub" value="Lei 13.608/2018 · LGPD" style="display:block;margin-bottom:14px"/>
+                    <h:div class="nsp-card-soft">
+                        <h:h4>Canal de notificações</h:h4>
+                        <h:p>Este canal opera em conformidade com a legislação brasileira, garantindo proteção ao notificante e anonimato absoluto, se desejado.</h:p>
+                        <h:p>O tratamento segue a LGPD, com uso exclusivo para investigação interna pelo Núcleo de Segurança do Paciente (NSP).</h:p>
+                        <h:p style="color:var(--muted);font-size:11px;margin:0">* Esta notificação não substitui o atendimento clínico. Em emergência, procure a equipe assistencial.</h:p>
+                    </h:div>
+                    <hlayout sclass="nsp-btnrow nsp-btnrow-4555" style="margin-top:16px">
+                        <button id="btnVoltar1" label="← Voltar"/>
+                        <button id="btnProsseguir1" label="Prosseguir →"/>
+                    </hlayout>
+                </vlayout>
+
+                <!-- Passo 2 · Dados do incidente -->
+                <vlayout id="passo2" visible="false">
+                    <h:div class="nsp-steps"><h:i class="done"/><h:i class="done"/><h:i/><h:i/></h:div>
+                    <label sclass="nsp-stepcap" value="Passo 2 de 4"/>
+                    <label id="lblTituloPasso2" sclass="nsp-title" style="font-size:17px" value="Dados do incidente"/>
+                    <label id="lblSubPasso2" sclass="nsp-sub" style="display:block;margin-bottom:16px"/>
+
+                    <hlayout style="width:100%">
+                        <vlayout style="flex:1">
+                            <label sclass="nsp-field-label" value="Data do incidente *"/>
+                            <textbox id="txtData" placeholder="dd/mm/aaaa" width="98%"/>
+                        </vlayout>
+                        <vlayout style="flex:1">
+                            <label sclass="nsp-field-label" value="Hora aprox."/>
+                            <textbox id="txtHora" placeholder="hh:mm" width="98%"/>
+                        </vlayout>
+                    </hlayout>
+
+                    <label sclass="nsp-field-label" style="margin-top:10px" value="Setor / unidade *"/>
+                    <combobox id="cboSetor" readonly="true" width="100%">
+                        <comboitem label="Pronto Socorro"/>
+                        <comboitem label="Enfermaria"/>
+                        <comboitem label="UTI Adulto"/>
+                        <comboitem label="UTI Neonatal"/>
+                        <comboitem label="Maternidade"/>
+                        <comboitem label="Centro Cirúrgico"/>
+                        <comboitem label="Farmácia"/>
+                        <comboitem label="Ambulatório"/>
+                    </combobox>
+
+                    <div id="camposDinamicos" style="margin-top:6px"/>
+
+                    <label sclass="nsp-field-label" style="margin-top:10px" value="Pré-classificação da gravidade *"/>
+                    <combobox id="cboGravidade" readonly="true" width="100%">
+                        <comboitem label="Circunstância de risco"/>
+                        <comboitem label="Near miss (quase erro)"/>
+                        <comboitem label="Incidente sem dano"/>
+                        <comboitem label="Dano leve"/>
+                        <comboitem label="Dano moderado"/>
+                        <comboitem label="Dano grave"/>
+                        <comboitem label="Óbito"/>
+                    </combobox>
+
+                    <label sclass="nsp-field-label" style="margin-top:10px" value="Gerou dano ao paciente?"/>
+                    <hlayout id="toggleDano" sclass="nsp-btnrow">
+                        <button id="btnDanoSim" label="Sim"/>
+                        <button id="btnDanoNao" label="Não"/>
+                    </hlayout>
+
+                    <label sclass="nsp-field-label" style="margin-top:10px" value="Nº do prontuário (se aplicável)"/>
+                    <textbox id="txtProntuario" placeholder="Opcional" width="100%"/>
+
+                    <hlayout sclass="nsp-btnrow nsp-btnrow-4555" style="margin-top:16px">
+                        <button id="btnVoltar2" label="← Voltar"/>
+                        <button id="btnProsseguir2" label="Próximo →"/>
+                    </hlayout>
+                </vlayout>
+
+                <!-- Passo 3 · Descrição + anexos -->
+                <vlayout id="passo3" visible="false">
+                    <h:div class="nsp-steps"><h:i class="done"/><h:i class="done"/><h:i class="done"/><h:i/></h:div>
+                    <label sclass="nsp-stepcap" value="Passo 3 de 4"/>
+                    <label sclass="nsp-title" style="font-size:17px;text-align:left" value="Descrição e anexos"/>
+                    <label sclass="nsp-sub" style="display:block;text-align:left;margin-bottom:12px" value="Descreva o ocorrido em detalhes"/>
+                    <textbox id="txtDescricao" rows="5" multiline="true" width="100%"
+                              placeholder="O que aconteceu? Inclua o produto/medicamento/equipamento envolvido, circunstâncias, pessoas presentes e consequências observadas."/>
+                    <h:div class="nsp-dz" style="margin-top:12px">
+                        <button id="btnAnexar" label="📎 Anexar fotos ou documentos" upload="true,maxsize=10240,multiple=true"/>
+                        <label style="display:block;font-size:10.5px;margin-top:6px" value="JPG, PNG, PDF — até 10 MB por arquivo"/>
+                        <label id="lblAnexos" style="display:block;font-size:11px;margin-top:6px;color:var(--c-d)"/>
+                    </h:div>
+                    <hlayout sclass="nsp-btnrow nsp-btnrow-4555" style="margin-top:16px">
+                        <button id="btnVoltar3" label="← Voltar"/>
+                        <button id="btnProsseguir3" label="Próximo →"/>
+                    </hlayout>
+                </vlayout>
+
+                <!-- Passo 4 · Contato opcional -->
+                <vlayout id="passo4" visible="false">
+                    <h:div class="nsp-steps"><h:i class="done"/><h:i class="done"/><h:i class="done"/><h:i class="done"/></h:div>
+                    <label sclass="nsp-stepcap" value="Passo 4 de 4"/>
+                    <label sclass="nsp-title" style="font-size:17px;text-align:left" value="Contato (opcional)"/>
+                    <label sclass="nsp-sub" style="display:block;text-align:left;margin-bottom:12px" value="Deseja que a equipe possa te contatar?"/>
+                    <h:div class="nsp-card-soft">
+                        <h:p>Ao informar e-mail ou telefone você deixa de ser anônimo e permite que a equipe entre em contato para esclarecer dúvidas.</h:p>
+                        <h:p style="margin:0">Para manter o anonimato, <h:b>basta concluir sem preencher.</h:b></h:p>
+                    </h:div>
+                    <label style="display:block;font-size:11px;color:var(--muted);margin:0 0 10px" value="* Sua identidade nunca é revelada ao setor notificado."/>
+                    <textbox id="txtEmail" placeholder="seu@email.com (opcional)" width="100%"/>
+                    <textbox id="txtTelefone" placeholder="Telefone / WhatsApp (opcional)" width="100%" style="margin-top:8px"/>
+                    <hlayout sclass="nsp-btnrow nsp-btnrow-4555" style="margin-top:16px">
+                        <button id="btnVoltar4" label="← Voltar"/>
+                        <button id="btnConcluir" label="Concluir ✓"/>
+                    </hlayout>
+                </vlayout>
+
+                <!-- Passo 5 · Conclusão -->
+                <vlayout id="passo5" visible="false" style="align-items:center;text-align:center">
+                    <h:div class="nsp-check">
+                        <label style="color:#fff;font-size:26px" value="✓"/>
+                    </h:div>
+                    <label sclass="nsp-title" style="font-size:19px" value="Recebemos sua notificação!"/>
+                    <label sclass="nsp-sub" value="Guarde os dados abaixo — são seu meio de acompanhamento." style="display:block;margin-bottom:10px"/>
+                    <h:div class="nsp-codebox" style="width:100%">
+                        <label sclass="k" style="display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)" value="Número do protocolo"/>
+                        <label id="lblProtocolo" sclass="v" style="font-size:18px;font-weight:800;color:#23201c"/>
+                    </h:div>
+                    <h:div class="nsp-codebox" style="width:100%">
+                        <label sclass="k" style="display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)" value="Senha de acesso"/>
+                        <label id="lblSenha" sclass="v" style="font-size:16px;font-weight:800;color:#23201c;font-family:monospace"/>
+                        <div id="linhaContato" visible="false" style="margin-top:8px">
+                            <label sclass="k" style="display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)" value="Contato vinculado"/>
+                            <label id="lblContato" style="font-size:12.5px"/>
+                        </div>
+                    </h:div>
+                    <label id="lblDica" sclass="nsp-hint"/>
+                    <hlayout style="margin-top:16px;width:100%">
+                        <button id="btnNovaNotificacao" label="← Voltar ao início" width="100%"/>
+                    </hlayout>
+                </vlayout>
+
+            </h:div>
+        </div>
+    </window>
+</zk>

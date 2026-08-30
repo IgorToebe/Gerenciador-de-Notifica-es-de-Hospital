@@ -1,0 +1,23 @@
+<?page title="Acompanhar Protocolo · NSP HU/UEM"?>
+<?meta name="viewport" content="width=device-width, initial-scale=1.0"?>
+<?link rel="stylesheet" type="text/css" href="/css/nsp.css"?>
+<zk xmlns="http://www.zkoss.org/2005/zul" xmlns:h="http://www.w3.org/1999/xhtml">
+    <window border="none" apply="br.com.hospital.notificacao.web.AcompanharComposer">
+        <div sclass="nsp-phone t-admin">
+            <h:div class="nsp-top">
+                <h:div class="nsp-brand">⬢ HU-UEM · NSP</h:div>
+            </h:div>
+            <h:div class="nsp-body">
+                <button id="btnVoltar" label="← Voltar" style="margin-bottom:16px"/>
+                <label sclass="nsp-title" style="font-size:19px" value="Acompanhar protocolo"/>
+                <label sclass="nsp-sub" value="Consulte o status da sua notificação" style="display:block;margin-bottom:18px"/>
+                <label sclass="nsp-field-label" value="Número do protocolo"/>
+                <textbox id="txtProtocolo" placeholder="Ex.: #TC-2026-004821" width="100%"/>
+                <label sclass="nsp-field-label" style="margin-top:10px" value="Senha"/>
+                <textbox id="txtSenha" type="password" width="100%"/>
+                <button id="btnConsultar" label="Consultar status" width="100%" style="margin-top:14px"/>
+                <div id="resultado" style="margin-top:16px"/>
+            </h:div>
+        </div>
+    </window>
+</zk>

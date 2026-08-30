@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<zk>
+    <!-- Limite de upload de anexos (10 MB), coerente com AnexoService.TAMANHO_MAXIMO_BYTES.
+         Precisa estar dentro de <device-config type="ajax">; fora dele é ignorado pelo ZK. -->
+    <device-config>
+        <device-type>ajax</device-type>
+        <max-upload-size>10240</max-upload-size>
+    </device-config>
+</zk>

@@ -1,0 +1,183 @@
+/*
+ * Design system do NSP HU/UEM, portado do protótipo funcional
+ * (ProtótipoFuncionalV1_LabEngSoftware.html). Carregado DEPOIS do tema padrão do ZK
+ * para poder sobrescrever a aparência de Textbox/Combobox/Textarea/Button.
+ */
+:root{
+  --bg:#ECE8E0; --paper:#F5F4EF; --ink:#26231f; --muted:#7c766c; --muted2:#9a948a;
+  --line:#e3ded4; --card:#ffffff; --panel:#211e1a;
+  --s-aberto-bg:#e3effb; --s-aberto-fg:#2b6cb0;
+  --s-analise-bg:#fbecd9; --s-analise-fg:#b5651d;
+  --s-invest-bg:#efeafb; --s-invest-fg:#6b4fc0;
+  --s-plano-bg:#e7f3ea; --s-plano-fg:#2f8a52;
+  --s-concl-bg:#e4f3df; --s-concl-fg:#3f8a37;
+  --r-baixo-bg:#e4f3df; --r-baixo-fg:#3f8a37; --r-baixo:#4e9c3e;
+  --r-medio-bg:#fbf0d6; --r-medio-fg:#a07c12; --r-medio:#c89a1f;
+  --r-alto-bg:#fbe6d6; --r-alto-fg:#b1571a; --r-alto:#dd6f1e;
+  --r-extremo-bg:#fbe3e6; --r-extremo-fg:#a8312b; --r-extremo:#c0392b;
+}
+
+/* Identidade visual por tipo de notificação: cada canal (QR Code) redefine estes tokens
+   no container raiz da página, e todo o resto herda via var(--c) etc. */
+.t-tecno{--c:#2f80d6;--c-d:#225fa3;--soft:#eaf2fc;--head:#cfe2f6;--ring:#bcd8f4}
+.t-farmaco{--c:#dd6f1e;--c-d:#b1571a;--soft:#fbeee6;--head:#f6d0b6;--ring:#f2c3a3}
+.t-paciente{--c:#b07a1c;--c-d:#8a5f15;--soft:#faf1dd;--head:#fbe0a3;--ring:#f3d28a}
+.t-nearmiss{--c:#d6336c;--c-d:#a82654;--soft:#fce9f0;--head:#f6cdde;--ring:#f1bcd2}
+.t-assist{--c:#4e9c3e;--c-d:#3c7a30;--soft:#eef5e3;--head:#d6ecbb;--ring:#c8e3a8}
+.t-admin{--c:#4a4742;--c-d:#2f2c28;--soft:#efece6;--head:#dcd8d0;--ring:#cfcabf}
+
+body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+
+/* ---- shell mobile (notificante) ---- */
+.nsp-phone{max-width:440px;margin:0 auto;min-height:100vh;background:var(--soft)}
+.nsp-top{background:var(--head);padding:13px 0 11px;text-align:center}
+.nsp-brand{font-weight:700;font-size:13.5px;color:var(--c-d)}
+.nsp-body{padding:20px 20px 40px}
+.nsp-badge-ico{width:60px;height:60px;border-radius:50%;background:var(--c);display:flex;align-items:center;justify-content:center;margin:12px auto}
+.nsp-title{text-align:center;font-size:20px;font-weight:800;line-height:1.2;margin:0 8px 4px;color:#23201c}
+.nsp-sub{text-align:center;font-size:12.5px;color:var(--muted);margin:0 0 18px}
+.nsp-ftag{text-align:center;font-size:10.5px;letter-spacing:.05em;color:var(--c-d);background:#fff;border:1px solid var(--ring);border-radius:20px;padding:4px 11px;display:inline-block;margin:0 auto 14px}
+.nsp-lawnote{text-align:center;font-size:11px;color:var(--muted);margin-top:16px;line-height:1.5}
+.nsp-steps{display:flex;align-items:center;justify-content:center;gap:5px;margin:4px 0}
+.nsp-steps i{height:4px;width:30px;border-radius:3px;background:var(--ring);display:inline-block}
+.nsp-steps i.done{background:var(--c)}
+.nsp-stepcap{text-align:center;font-size:10.5px;letter-spacing:.12em;color:var(--muted);text-transform:uppercase;margin:2px 0 14px;font-weight:700}
+.nsp-field-label{display:block;font-size:12.5px;font-weight:600;color:#3a352f;margin-bottom:6px}
+.nsp-req{color:#c0392b}
+.nsp-card-soft{background:#fff;border:1px solid var(--ring);border-radius:14px;padding:15px;margin-bottom:12px}
+.nsp-card-soft h4{margin:0 0 7px;font-size:13.5px;color:var(--c-d)}
+.nsp-card-soft p{margin:0 0 8px;font-size:12.5px;color:#4a443c;line-height:1.55}
+.nsp-grouplbl{font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted2);font-weight:700;margin:14px 2px 6px}
+.nsp-seltype{display:flex;align-items:center;gap:11px;background:#fff;border:1px solid var(--ring);border-radius:12px;padding:11px 13px;width:100%;margin-bottom:8px}
+.nsp-seltype .si{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex:0 0 34px}
+.nsp-seltype b{display:block;font-size:13.5px;color:#23201c}
+.nsp-seltype span{font-size:11px;color:var(--muted)}
+.nsp-hint{text-align:center;font-size:11px;color:var(--muted);margin:6px 4px 0;line-height:1.5}
+.nsp-codebox{background:#fff;border:1px solid var(--ring);border-radius:12px;padding:13px 15px;margin:9px 0}
+.nsp-codebox .k{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.nsp-codebox .v{font-size:18px;font-weight:800;color:#23201c;letter-spacing:.02em}
+.nsp-check{width:60px;height:60px;border-radius:50%;background:var(--c);display:flex;align-items:center;justify-content:center;margin:6px auto 12px}
+.nsp-dz{border:2px dashed var(--ring);border-radius:12px;padding:20px 12px;text-align:center;color:var(--muted);font-size:12px;background:#fff}
+
+/* ---- shell admin ---- */
+.nsp-admin{display:flex;min-height:100vh;background:var(--paper)}
+.nsp-side{width:230px;flex:0 0 230px;background:#211e1a;color:#b7b1a6;padding:16px 0;display:flex;flex-direction:column}
+.nsp-side .logo{padding:0 18px 14px}
+.nsp-side .logo b{display:block;color:#fff;font-size:15px}
+.nsp-side .logo span{font-size:10.5px;color:#8a847a}
+.nsp-side .navlink{display:flex;align-items:center;gap:9px;padding:11px 18px;color:#b7b1a6;text-decoration:none;font-size:13.5px;border-left:3px solid transparent}
+.nsp-side .navlink:hover{background:#2a2723;color:#fff}
+.nsp-side .navlink.on{background:#312d28;color:#fff;border-left-color:var(--c, #2f80d6)}
+.nsp-side .who{margin-top:auto;padding:14px 18px 14px;border-top:1px solid #312d28;font-size:11px;color:#8a847a}
+.nsp-side .who b{color:#cfc9bf;display:block;font-size:12px}
+.nsp-main{flex:1;min-width:0;padding:22px 26px}
+.nsp-topbar h2{margin:0;font-size:21px;font-weight:800;color:#23201c}
+.nsp-topbar .crumb{font-size:12.5px;color:var(--muted);margin-top:3px}
+
+.nsp-kpis{display:flex;gap:13px;margin-bottom:22px;flex-wrap:wrap}
+.nsp-kpi{background:#fff;border:1px solid var(--line);border-radius:13px;padding:15px 16px;flex:1;min-width:150px;border-left:4px solid #ccc}
+.nsp-kpi .lab{font-size:11.5px;color:var(--muted);margin-bottom:7px}
+.nsp-kpi .val{font-size:27px;font-weight:800;color:#23201c;line-height:1}
+.nsp-kpi .delta{font-size:11px;margin-top:6px;color:var(--muted)}
+
+.nsp-panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px 26px;margin-bottom:18px}
+.nsp-panel h3{margin:0 0 3px;font-size:17px;color:#23201c}
+.nsp-panel .pmeta{font-size:12.5px;color:var(--muted);margin-bottom:6px}
+.nsp-sec-title{font-size:12px;letter-spacing:.07em;text-transform:uppercase;color:var(--c-d, #23201c);font-weight:800;margin:22px 0 12px;padding-bottom:7px;border-bottom:2px solid var(--ring, #e3ded4)}
+
+.nsp-tg{display:inline-block;padding:4px 11px;border-radius:16px;font-size:11.5px;font-weight:600;white-space:nowrap}
+.nsp-dupflag{font-size:10px;color:#b1571a;background:#fbecd9;border-radius:10px;padding:2px 7px;margin-left:6px;font-weight:600}
+.nsp-chip{border:1px solid var(--ring, #e3ded4);background:#fff;border-radius:20px;padding:7px 14px;font-size:12.5px;color:#4a443c}
+.nsp-chip.on{background:#2b2723;border-color:#2b2723;color:#fff;font-weight:600}
+
+.nsp-matrix-cell{width:56px;height:42px;border:2px solid #fff;border-radius:7px;text-align:center;font-size:11px;font-weight:700;color:#fff}
+.nsp-matrix-cell.sel{outline:3px solid #23201c;outline-offset:1px}
+
+.nsp-stepper{display:flex;align-items:center;margin:14px 0 22px;flex-wrap:wrap}
+.nsp-stepper .st{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.nsp-stepper .st b{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;background:#ddd7cc;color:#fff}
+.nsp-stepper .st.done b{background:#4e9c3e}
+.nsp-stepper .st.act b{background:#2f80d6}
+.nsp-stepper .st.act{color:#2f80d6;font-weight:700}
+.nsp-stepper .st.done{color:#4e9c3e}
+.nsp-stepper .bar{flex:1;min-width:18px;height:3px;background:#ddd7cc;margin:0 6px 18px;border-radius:2px}
+.nsp-stepper .bar.done{background:#4e9c3e}
+
+.nsp-cf{border:1px solid var(--line);border-radius:11px;overflow:hidden;margin-bottom:12px}
+.nsp-cf .h{padding:9px 13px;font-size:11.5px;font-weight:800}
+.nsp-cf-prof .h{background:#eaf2fc;color:#225fa3}
+.nsp-cf-com .h{background:#efeafb;color:#6b4fc0}
+.nsp-cf-pac .h{background:#fce9f0;color:#a82654}
+.nsp-cf-amb .h{background:#eef5e3;color:#3c7a30}
+.nsp-cf-org .h{background:#fbf0d6;color:#a07c12}
+.nsp-cf-ext .h{background:#f1ece6;color:#6b6258}
+
+.nsp-alertpill{background:#fbe3e6;color:#c0392b;border-radius:20px;padding:7px 15px;font-size:12.5px;font-weight:600}
+.nsp-note{background:#fffaf2;border:1px solid #f2d9b0;border-radius:11px;padding:12px 15px;font-size:12.5px;color:#7a5a1e;margin-bottom:16px;line-height:1.55}
+.nsp-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--muted);margin-top:12px}
+.nsp-empty{text-align:center;color:var(--muted);padding:34px 12px;font-size:13.5px}
+
+/* "Tabela" construída com Div (flexbox) em vez de <table> literal: os componentes zul
+   (Div/Label) já têm comportamento e API verificados, o que reduz risco num build único. */
+.nsp-table{display:flex;flex-direction:column;margin-top:6px;font-size:13px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#fff}
+.nsp-table .nsp-thead{display:flex;background:#f3f0ea;font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:10px 0}
+.nsp-table .nsp-row{display:flex;align-items:center;padding:11px 0;border-bottom:1px solid var(--line)}
+.nsp-table .nsp-row:last-child{border-bottom:none}
+.nsp-table .nsp-row.dup{background:#fffaf2}
+.nsp-table .nsp-cell{padding:0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nsp-linkbtn{color:#2b6cb0;font-weight:600;cursor:pointer;font-size:12.5px}
+.nsp-w5tab{width:100%;border-collapse:collapse;font-size:12.5px;min-width:900px}
+.nsp-w5tab th{background:#2b2723;color:#fff;padding:10px;font-size:10.5px;letter-spacing:.04em;text-transform:uppercase;text-align:left;font-weight:700}
+.nsp-w5tab td{padding:11px 10px;border-bottom:1px solid var(--line);color:#3a352f;vertical-align:top}
+.nsp-stbox{border:1px solid var(--line);border-radius:11px;padding:11px 12px;background:#fff;text-align:center;flex:1;min-width:110px}
+.nsp-stbox .n{font-size:22px;font-weight:800;line-height:1;display:block}
+.nsp-stbox .l{font-size:10.5px;color:var(--muted);margin-top:5px;display:block}
+.nsp-tcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:14px;border-left:5px solid #ccc}
+.nsp-whys .lbl{flex:0 0 168px;font-size:12px;font-weight:700;color:#3a352f}
+
+/* Overrides do tema padrao do ZK para reproduzir os campos do protótipo */
+.nsp-phone .z-textbox,.nsp-phone .z-combobox-input,.nsp-phone .z-textarea,
+.nsp-panel .z-textbox,.nsp-panel .z-combobox-input,.nsp-panel .z-textarea,
+.nsp-admin .z-textbox,.nsp-admin .z-combobox-input,.nsp-admin .z-textarea{
+  border:1px solid var(--ring, #e3ded4)!important;background:#fff!important;border-radius:10px!important;
+  padding:10px 12px!important;font-size:13.5px!important;color:#2f2b26!important;box-shadow:none!important;
+}
+.nsp-phone .z-button,.nsp-panel .z-button,.nsp-admin .z-button{
+  border-radius:12px!important;font-weight:700!important;box-sizing:border-box!important;
+  white-space:normal!important;line-height:1.3!important;
+}
+
+/* Toggle Sim/Não e campos de alternância dos formulários (equivalente a .toggle button.sel-on) */
+.nsp-phone .z-button.sel-on-toggle{background:var(--c, #2f80d6)!important;color:#fff!important;border-color:var(--c, #2f80d6)!important}
+
+/* Linhas de botões pareados (Voltar/Prosseguir, Sim/Não etc.): o layout usa flexbox com
+   flex-grow em vez de width fixo em %, porque width fixo somado ao espaçamento entre os
+   botões fazia o texto (em negrito) estourar a caixa do botão em telas estreitas. */
+.nsp-phone .nsp-btnrow{display:flex!important;flex-wrap:nowrap!important;gap:8px;width:100%}
+.nsp-phone .nsp-btnrow .z-button{
+  flex:1 1 0!important;width:auto!important;min-width:0!important;margin:0!important;
+  padding:10px 8px!important;font-size:13px!important;text-align:center!important;
+}
+.nsp-phone .nsp-btnrow.nsp-btnrow-4555 .z-button:first-child{flex-grow:45!important}
+.nsp-phone .nsp-btnrow.nsp-btnrow-4555 .z-button:last-child{flex-grow:55!important}
+
+@media (max-width:880px){
+  .nsp-admin{flex-direction:column}
+  .nsp-side{width:100%;flex:none}
+  .nsp-main{padding:14px}
+  .nsp-kpis{flex-direction:column}
+}
+
+/* Telas de notificante (.nsp-phone) abertas em desktop/notebook (ex.: monitor 16:9):
+   em vez de esticar o cartão de celular numa tela larga, ele vira um cartão centralizado
+   com respiro e sombra. Abaixo de 769px (celulares abertos via QR Code/link) o layout
+   permanece "de ponta a ponta", igual ao protótipo mobile original. */
+@media (min-width:769px){
+  body{background:var(--bg)}
+  .nsp-phone{
+    max-width:640px;margin:32px auto;min-height:calc(100vh - 64px);
+    border-radius:20px;box-shadow:0 16px 40px rgba(35,32,28,.12);overflow:hidden;
+  }
+  .nsp-top{border-radius:20px 20px 0 0}
+  .nsp-body{padding:28px 36px 44px}
+}

@@ -12,6 +12,10 @@ services:
       DB2_DATABASE: HOSPITAL
       DB2_USER: db2inst1
       DB2_PASSWORD: ${DB2_PASSWORD}
+      ANEXOS_DIR: /app/anexos
+      ADMIN_SENHA_INICIAL: ${ADMIN_SENHA_INICIAL:-TrocarSenha@2026}
+    volumes:
+      - anexos-data:/app/anexos
 
   db2:
     image: icr.io/db2_community/db2:11.5.9.0
@@ -28,8 +32,12 @@ services:
       test: ["CMD", "su", "-", "db2inst1", "-c", "db2 connect to HOSPITAL"]
       interval: 30s
       timeout: 20s
-      retries: 15
-      start_period: 5m
+      # Em máquinas com pouca RAM livre a criação da instância DB2 fica bem mais
+      # lenta que o padrão do container (swap em vez de RAM), então a janela de
+      # tolerância antes de marcar unhealthy foi ampliada.
+      retries: 40
+      start_period: 20m
 
 volumes:
   db2-data:
+  anexos-data:

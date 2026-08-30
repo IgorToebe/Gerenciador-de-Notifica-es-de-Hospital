@@ -5,7 +5,7 @@
          version="4.0">
 
   <listener>
-    <listener-class>br.com.hospital.notificacao.AppInitListener</listener-class>
+    <listener-class>br.com.hospital.notificacao.config.AppInitListener</listener-class>
   </listener>
 
   <listener>
@@ -37,6 +37,36 @@
   <servlet-mapping>
     <servlet-name>auEngine</servlet-name>
     <url-pattern>/zkau/*</url-pattern>
+  </servlet-mapping>
+
+  <!-- Gera o PNG do QR Code de um canal: /qr?tipo=tecno -->
+  <servlet>
+    <servlet-name>qrCodeServlet</servlet-name>
+    <servlet-class>br.com.hospital.notificacao.web.QrCodeServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>qrCodeServlet</servlet-name>
+    <url-pattern>/qr</url-pattern>
+  </servlet-mapping>
+
+  <!-- URL curta impressa nos cartazes: /n/tecno -->
+  <servlet>
+    <servlet-name>qrRedirectServlet</servlet-name>
+    <servlet-class>br.com.hospital.notificacao.web.QrRedirectServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>qrRedirectServlet</servlet-name>
+    <url-pattern>/n/*</url-pattern>
+  </servlet-mapping>
+
+  <!-- Download de anexos, restrito a usuarios autenticados: /anexo/{id} -->
+  <servlet>
+    <servlet-name>anexoServlet</servlet-name>
+    <servlet-class>br.com.hospital.notificacao.web.AnexoServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>anexoServlet</servlet-name>
+    <url-pattern>/anexo/*</url-pattern>
   </servlet-mapping>
 
   <welcome-file-list>

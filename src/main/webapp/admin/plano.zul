@@ -1,0 +1,17 @@
+<?init class="br.com.hospital.notificacao.web.AutenticacaoInit"?>
+<?page title="Plano de Ação 5W2H · NSP HU/UEM"?>
+<?link rel="stylesheet" type="text/css" href="/css/nsp.css"?>
+<zk xmlns="http://www.zkoss.org/2005/zul" xmlns:h="http://www.w3.org/1999/xhtml">
+    <window border="none" apply="br.com.hospital.notificacao.web.PlanoComposer">
+        <div sclass="nsp-admin t-admin">
+            <div id="sidebar" sclass="nsp-side"/>
+            <h:div class="nsp-main">
+                <h:div class="nsp-topbar" style="margin-bottom:18px">
+                    <h:h2>Plano de ação 5W2H</h:h2>
+                    <h:div class="crumb">SGQ-001 · medidas mitigadoras</h:div>
+                </h:div>
+                <div id="conteudo"/>
+            </h:div>
+        </div>
+    </window>
+</zk>
