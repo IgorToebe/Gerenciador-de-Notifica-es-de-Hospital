@@ -15,24 +15,36 @@ import java.util.List;
 public class PlanoAcaoDAO {
 
     public boolean existePlano(long idNotificacao) {
-        String sql = "SELECT COUNT(*) FROM PLANO_ACAO WHERE ID_NOTIFICACAO = ?";
-        try (Connection con = DataSourceFactory.obterConexao();
-             PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setLong(1, idNotificacao);
-            try (ResultSet rs = ps.executeQuery()) {
-                rs.next();
-                return rs.getInt(1) > 0;
-            }
+        try (Connection con = DataSourceFactory.obterConexao()) {
+            return existePlano(con, idNotificacao);
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao verificar existencia de plano de acao", e);
         }
     }
 
+    public boolean existePlano(Connection con, long idNotificacao) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM PLANO_ACAO WHERE ID_NOTIFICACAO = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, idNotificacao);
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1) > 0;
+            }
+        }
+    }
+
     public long inserir(AcaoPlano a) {
+        try (Connection con = DataSourceFactory.obterConexao()) {
+            return inserir(con, a);
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao inserir acao do plano 5W2H", e);
+        }
+    }
+
+    public long inserir(Connection con, AcaoPlano a) throws SQLException {
         String sql = "INSERT INTO PLANO_ACAO (ID_NOTIFICACAO, CODIGO, O_QUE, QUEM, ONDE, PORQUE, COMO, QUANTO, " +
                 "DATA_INICIO, DATA_FIM, STATUS, EVIDENCIA, ORDEM) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)";
-        try (Connection con = DataSourceFactory.obterConexao();
-             PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+        try (PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setLong(1, a.getIdNotificacao());
             ps.setString(2, a.getCodigo());
             ps.setString(3, a.getoQue());
@@ -51,8 +63,6 @@ public class PlanoAcaoDAO {
                 keys.next();
                 return keys.getLong(1);
             }
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao inserir acao do plano 5W2H", e);
         }
     }
 
@@ -91,6 +101,26 @@ public class PlanoAcaoDAO {
             ps.executeUpdate();
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao atualizar evidencia da acao", e);
+        }
+    }
+
+    public void atualizarCampos(AcaoPlano acao) {
+        String sql = "UPDATE PLANO_ACAO SET O_QUE=?, QUEM=?, ONDE=?, PORQUE=?, COMO=?, QUANTO=?, " +
+                "DATA_INICIO=?, DATA_FIM=? WHERE ID=?";
+        try (Connection con = DataSourceFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, acao.getoQue());
+            ps.setString(2, acao.getQuem());
+            ps.setString(3, acao.getOnde());
+            ps.setString(4, acao.getPorque());
+            ps.setString(5, acao.getComo());
+            ps.setString(6, acao.getQuanto());
+            ps.setString(7, acao.getDataInicio());
+            ps.setString(8, acao.getDataFim());
+            ps.setLong(9, acao.getId());
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao atualizar campos do plano de acao", e);
         }
     }
 

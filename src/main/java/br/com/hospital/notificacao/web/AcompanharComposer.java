@@ -37,6 +37,10 @@ public class AcompanharComposer extends SelectorComposer<Component> {
             resultado.appendChild(mensagem("Informe o número do protocolo.", "#a82654"));
             return;
         }
+        if (txtSenha.getValue() == null || txtSenha.getValue().trim().isEmpty()) {
+            resultado.appendChild(mensagem("Informe a senha exibida na conclusão da notificação.", "#a82654"));
+            return;
+        }
 
         Optional<Notificacao> encontrada = notificacaoService.buscarParaAcompanhamento(protocolo, txtSenha.getValue());
         if (!encontrada.isPresent()) {

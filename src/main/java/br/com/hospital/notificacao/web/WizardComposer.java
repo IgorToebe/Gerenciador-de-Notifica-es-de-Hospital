@@ -53,7 +53,9 @@ public class WizardComposer extends SelectorComposer<Component> {
     @Wire private Textbox txtProntuario;
     @Wire private Textbox txtDescricao;
     @Wire private Button btnAnexar;
+    @Wire private Button btnConcluir;
     @Wire private Label lblAnexos;
+    @Wire private Div listaAnexos;
     @Wire private Textbox txtEmail;
     @Wire private Textbox txtTelefone;
     @Wire private Component linhaContato;
@@ -70,6 +72,7 @@ public class WizardComposer extends SelectorComposer<Component> {
     private final Map<String, Component> componentesDinamicos = new LinkedHashMap<>();
     private final Map<String, String> valoresToggleDinamico = new LinkedHashMap<>();
     private final List<AnexoUpload> anexosPendentes = new ArrayList<>();
+    private boolean enviando;
 
     @Override
     public void doAfterCompose(Component comp) throws Exception {
@@ -90,6 +93,17 @@ public class WizardComposer extends SelectorComposer<Component> {
             camposDinamicos.appendChild(construirRotulo(def));
             camposDinamicos.appendChild(construirCampo(def));
         }
+        instalarMascarasClientSide();
+    }
+
+    private void instalarMascarasClientSide() {
+        String script = "zk.afterMount(function(){"
+                + "function input(id){var w=zk.Widget.$('" + txtData.getUuid() + "');return w&&w.getInputNode?w.getInputNode():null;}"
+                + "var data=input();if(data)jq(data).on('input',function(){var v=this.value.replace(/\\D/g,'').slice(0,8);this.value=v.length>2?v.slice(0,2)+'/'+(v.length>4?v.slice(2,4)+'/'+v.slice(4):v.slice(2)):v;});"
+                + "var hora=zk.Widget.$('" + txtHora.getUuid() + "');hora=hora&&hora.getInputNode?hora.getInputNode():null;if(hora)jq(hora).on('input',function(){var v=this.value.replace(/\\D/g,'').slice(0,4);this.value=v.length>2?v.slice(0,2)+':'+v.slice(2):v;});"
+                + "var tel=zk.Widget.$('" + txtTelefone.getUuid() + "');tel=tel&&tel.getInputNode?tel.getInputNode():null;if(tel)jq(tel).on('input',function(){var v=this.value.replace(/\\D/g,'').slice(0,11),p=v.length>10?7:6;this.value=v.length>2?'('+v.slice(0,2)+') '+(v.length>p?v.slice(2,p)+'-'+v.slice(p):v.slice(2)):v;});"
+                + "});";
+        Clients.evalJavaScript(script);
     }
 
     private Label construirRotulo(CampoDinamicoDef def) {
@@ -240,7 +254,7 @@ public class WizardComposer extends SelectorComposer<Component> {
             aceitos++;
         }
         if (aceitos > 0) {
-            lblAnexos.setValue("✓ " + anexosPendentes.size() + " arquivo(s) anexado(s)");
+            renderizarAnexos();
         }
     }
 
@@ -258,6 +272,9 @@ public class WizardComposer extends SelectorComposer<Component> {
 
     @Listen("onClick = #btnConcluir")
     public void concluir() {
+        if (enviando) return;
+        enviando = true;
+        btnConcluir.setDisabled(true);
         NovaNotificacaoRequest req = new NovaNotificacaoRequest();
         req.setTipo(tipo);
         req.setDataIncidente(txtData.getValue());
@@ -278,6 +295,8 @@ public class WizardComposer extends SelectorComposer<Component> {
         try {
             resultado = notificacaoService.criar(req);
         } catch (RuntimeException e) {
+            enviando = false;
+            btnConcluir.setDisabled(false);
             Clients.showNotification("Não foi possível registrar a notificação: " + e.getMessage(), "error",
                     null, "top_center", 4000);
             return;
@@ -312,6 +331,28 @@ public class WizardComposer extends SelectorComposer<Component> {
             return false;
         }
         return true;
+    }
+
+    private void renderizarAnexos() {
+        listaAnexos.getChildren().clear();
+        lblAnexos.setValue(anexosPendentes.isEmpty() ? "" : "✓ " + anexosPendentes.size() + " arquivo(s) anexado(s)");
+        for (int i = 0; i < anexosPendentes.size(); i++) {
+            final int indice = i;
+            AnexoUpload anexo = anexosPendentes.get(i);
+            Div linha = new Div();
+            linha.setStyle("display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:5px");
+            Label nome = new Label(anexo.getNomeOriginal() + " (" + anexo.getConteudo().length / 1024 + " KB)");
+            nome.setStyle("font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap");
+            Button remover = new Button("Remover");
+            remover.setStyle("font-size:10px;padding:3px 7px");
+            remover.addEventListener("onClick", e -> {
+                anexosPendentes.remove(indice);
+                renderizarAnexos();
+            });
+            linha.appendChild(nome);
+            linha.appendChild(remover);
+            listaAnexos.appendChild(linha);
+        }
     }
 
 }

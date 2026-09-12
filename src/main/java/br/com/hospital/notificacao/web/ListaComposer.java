@@ -5,7 +5,9 @@ import br.com.hospital.notificacao.model.Notificacao;
 import br.com.hospital.notificacao.model.NivelRisco;
 import br.com.hospital.notificacao.model.StatusNotificacao;
 import br.com.hospital.notificacao.service.NotificacaoService;
+import br.com.hospital.notificacao.service.ValidacaoNotificacao;
 import org.zkoss.zk.ui.Executions;
+import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Label;
 import org.zkoss.zul.Textbox;
@@ -38,7 +40,7 @@ public class ListaComposer extends AdminComposer {
 
     private Div construirBarraFiltros() {
         Div barra = new Div();
-        barra.setStyle("display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap");
+        barra.setStyle("display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap");
 
         Div chips = new Div();
         chips.setStyle("display:flex;gap:8px;flex-wrap:wrap");
@@ -75,7 +77,59 @@ public class ListaComposer extends AdminComposer {
             atualizarTabela();
         });
         barra.appendChild(busca);
+
+        Textbox dataInicial = new Textbox();
+        dataInicial.setPlaceholder("De dd/mm/aaaa");
+        dataInicial.setMaxlength(10);
+        dataInicial.setWidth("120px");
+        dataInicial.addEventListener("onChange", event -> aplicarData(dataInicial, true));
+        barra.appendChild(dataInicial);
+        instalarMascaraData(dataInicial);
+
+        Textbox dataFinal = new Textbox();
+        dataFinal.setPlaceholder("Até dd/mm/aaaa");
+        dataFinal.setMaxlength(10);
+        dataFinal.setWidth("120px");
+        dataFinal.addEventListener("onChange", event -> aplicarData(dataFinal, false));
+        barra.appendChild(dataFinal);
+        instalarMascaraData(dataFinal);
+
+        Label limpar = new Label("Limpar filtros");
+        limpar.setSclass("nsp-linkbtn");
+        limpar.addEventListener("onClick", event -> {
+            filtro.status = null;
+            filtro.apenasDuplicatas = false;
+            filtro.texto = null;
+            filtro.dataInicial = null;
+            filtro.dataFinal = null;
+            filtro.gravidade = null;
+            filtro.pagina = 1;
+            atualizarTabela();
+        });
+        barra.appendChild(limpar);
         return barra;
+    }
+
+    private void instalarMascaraData(Textbox campo) {
+        String script = "zk.afterMount(function(){var w=zk.Widget.$('" + campo.getUuid() + "');"
+            + "var input=w&&w.getInputNode?w.getInputNode():null;if(input)jq(input).on('input',function(){"
+            + "var v=this.value.replace(/\\D/g,'').slice(0,8);this.value=v.length>2?v.slice(0,2)+'/'+"
+            + "(v.length>4?v.slice(2,4)+'/'+v.slice(4):v.slice(2)):v;});});";
+        Clients.evalJavaScript(script);
+    }
+
+    private void aplicarData(Textbox campo, boolean inicial) {
+        String valor = campo.getValue() == null ? "" : campo.getValue().trim();
+        try {
+            if (!valor.isEmpty()) ValidacaoNotificacao.validarData(valor, inicial ? "Data inicial" : "Data final");
+        } catch (IllegalArgumentException e) {
+            Clients.wrongValue(campo, e.getMessage());
+            return;
+        }
+        if (inicial) filtro.dataInicial = valor.isEmpty() ? null : valor;
+        else filtro.dataFinal = valor.isEmpty() ? null : valor;
+        filtro.pagina = 1;
+        atualizarTabela();
     }
 
     private boolean chipAtivo(String chave) {
@@ -111,7 +165,9 @@ public class ListaComposer extends AdminComposer {
         }
 
         for (Notificacao n : resultado.itens) {
-            boolean dup = n.getProntuario() != null && duplicatas.containsKey(n.getProntuario());
+                String chaveDup = n.getProntuario() == null ? null
+                    : NotificacaoDAO.chaveDuplicidade(n.getProntuario(), n.getGravidade());
+                boolean dup = chaveDup != null && duplicatas.containsKey(chaveDup);
             Div linha = new Div();
             linha.setSclass("nsp-row" + (dup ? " dup" : ""));
 
@@ -126,7 +182,7 @@ public class ListaComposer extends AdminComposer {
             Label pront = new Label(n.getProntuario() != null && !n.getProntuario().isEmpty() ? n.getProntuario() : "—");
             prontCelula.appendChild(pront);
             if (dup) {
-                Label flag = new Label(duplicatas.get(n.getProntuario()) + " c/ mesmo prontuário");
+                Label flag = new Label(duplicatas.get(chaveDup) + " c/ prontuário e gravidade");
                 flag.setSclass("nsp-dupflag");
                 prontCelula.appendChild(flag);
             }

@@ -36,9 +36,7 @@ public class NotificacaoService {
     private final AnexoService anexoService = new AnexoService();
 
     public ResultadoNotificacao criar(NovaNotificacaoRequest req) {
-        if (req.getTipo() == null) {
-            throw new IllegalArgumentException("Tipo de notificação é obrigatório");
-        }
+        ValidacaoNotificacao.validar(req);
 
         long sequencial = notificacaoDAO.proximoSequencial();
         String protocolo = ProtocoloService.gerarProtocolo(req.getTipo(), sequencial);
@@ -66,6 +64,7 @@ public class NotificacaoService {
 
         try (Connection con = DataSourceFactory.obterConexao()) {
             con.setAutoCommit(false);
+            List<String> arquivosGravados = new ArrayList<>();
             try {
                 long id = notificacaoDAO.inserir(con, n);
 
@@ -75,7 +74,7 @@ public class NotificacaoService {
                 }
 
                 for (AnexoUpload upload : req.getAnexos()) {
-                    anexoService.salvar(con, id, upload.getNomeOriginal(), upload.getMime(), upload.getConteudo());
+                    arquivosGravados.add(anexoService.salvar(con, id, upload.getNomeOriginal(), upload.getMime(), upload.getConteudo()));
                 }
 
                 historicoDAO.inserir(con, id, null, StatusNotificacao.ABERTO, null,
@@ -89,6 +88,7 @@ public class NotificacaoService {
                 con.commit();
             } catch (RuntimeException | SQLException e) {
                 con.rollback();
+                arquivosGravados.forEach(anexoService::excluirFisico);
                 throw (e instanceof RuntimeException) ? (RuntimeException) e
                         : new RuntimeException("Erro ao criar notificação", e);
             } finally {
@@ -127,13 +127,16 @@ public class NotificacaoService {
     }
 
     public Optional<Notificacao> buscarParaAcompanhamento(String protocolo, String senha) {
+        if (protocolo == null || protocolo.trim().isEmpty()
+                || senha == null || senha.trim().isEmpty()) {
+            return Optional.empty();
+        }
         Optional<Notificacao> encontrada = notificacaoDAO.buscarPorProtocolo(protocolo.trim());
         if (!encontrada.isPresent()) {
             return Optional.empty();
         }
         Notificacao n = encontrada.get();
-        if (senha != null && !senha.trim().isEmpty()
-                && !HashSenha.conferir(senha.trim(), n.getSenhaSalt(), n.getSenhaHash())) {
+        if (!HashSenha.conferir(senha.trim(), n.getSenhaSalt(), n.getSenhaHash())) {
             return Optional.empty();
         }
         return Optional.of(n);

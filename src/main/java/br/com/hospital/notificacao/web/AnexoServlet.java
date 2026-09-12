@@ -21,7 +21,8 @@ public class AnexoServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        if (SessaoUtil.usuarioDaSessaoHttp(req.getSession(false)) == null) {
+        br.com.hospital.notificacao.model.Usuario usuario = SessaoUtil.usuarioDaSessaoHttp(req.getSession(false));
+        if (usuario == null || !usuario.isAtivo()) {
             resp.sendRedirect(req.getContextPath() + "/login.zul");
             return;
         }

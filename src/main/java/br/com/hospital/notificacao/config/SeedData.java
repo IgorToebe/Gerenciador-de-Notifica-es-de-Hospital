@@ -24,7 +24,7 @@ public final class SeedData {
             }
             String senhaInicial = System.getenv("ADMIN_SENHA_INICIAL");
             if (senhaInicial == null || senhaInicial.isEmpty()) {
-                senhaInicial = "TrocarSenha@2026";
+                throw new IllegalStateException("Variável ADMIN_SENHA_INICIAL não definida");
             }
             inserirUsuario(con, "ana.qualidade", "Ana - Qualidade", Perfil.NSP_GESTOR, senhaInicial);
             inserirUsuario(con, "carlos.nsp", "Carlos - NSP", Perfil.NSP_ANALISTA, senhaInicial);

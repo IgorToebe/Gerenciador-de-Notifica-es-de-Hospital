@@ -57,12 +57,19 @@ public class InvestigacaoDAO {
     }
 
     public void salvar(Investigacao inv) {
+        try (Connection con = DataSourceFactory.obterConexao()) {
+            salvar(con, inv);
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao salvar investigacao", e);
+        }
+    }
+
+    public void salvar(Connection con, Investigacao inv) throws SQLException {
         String sql = "UPDATE INVESTIGACAO SET PARECERISTA=?, DATA_INVESTIGACAO=?, FONTES=?, FATOR_PROFISSIONAL=?, " +
                 "FATOR_COMUNICACAO=?, FATOR_PACIENTE=?, FATOR_AMBIENTE=?, FATOR_ORGANIZACIONAL=?, FATOR_EXTERNO=?, " +
                 "PORQUE1=?, PORQUE2=?, PORQUE3=?, PORQUE4=?, CAUSA_RAIZ=?, DETECCAO=?, ATENUANTES=?, PARECER=?, " +
                 "CONCLUIDA=? WHERE ID=?";
-        try (Connection con = DataSourceFactory.obterConexao();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, inv.getParecerista());
             ps.setString(2, inv.getDataInvestigacao());
             ps.setString(3, inv.getFontes());
@@ -83,8 +90,6 @@ public class InvestigacaoDAO {
             ps.setInt(18, inv.isConcluida() ? 1 : 0);
             ps.setLong(19, inv.getId());
             ps.executeUpdate();
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao salvar investigacao", e);
         }
     }
 

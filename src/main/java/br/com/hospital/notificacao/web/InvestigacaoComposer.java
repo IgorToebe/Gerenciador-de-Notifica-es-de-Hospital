@@ -8,6 +8,7 @@ import br.com.hospital.notificacao.model.StatusNotificacao;
 import br.com.hospital.notificacao.model.Usuario;
 import br.com.hospital.notificacao.service.InvestigacaoService;
 import br.com.hospital.notificacao.service.NotificacaoService;
+import br.com.hospital.notificacao.service.ValidacaoNotificacao;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Div;
@@ -39,6 +40,7 @@ public class InvestigacaoComposer extends AdminComposer {
 
     @Override
     protected void renderConteudo(Div conteudo) {
+        adicionarVoltar(conteudo, "/admin/notificacoes.zul", "← Voltar para notificações");
         notificacao = carregarNotificacao();
         if (notificacao == null) {
             Label vazio = new Label("Nenhuma notificação em investigação no momento.");
@@ -269,12 +271,28 @@ public class InvestigacaoComposer extends AdminComposer {
 
     private void salvarRascunho() {
         preencherInvestigacaoComFormulario();
+        try {
+            if (investigacao.getDataInvestigacao() != null && !investigacao.getDataInvestigacao().trim().isEmpty()) {
+                ValidacaoNotificacao.validarData(investigacao.getDataInvestigacao(), "Data da investigação");
+            }
+        } catch (IllegalArgumentException e) {
+            Clients.showNotification(e.getMessage(), "error", txtData, "before_center", 3000);
+            return;
+        }
         investigacaoService.salvarRascunho(investigacao);
         Clients.showNotification("Rascunho salvo", "info", null, "top_center", 2000);
     }
 
     private void gerarPlano() {
         preencherInvestigacaoComFormulario();
+        try {
+            if (investigacao.getDataInvestigacao() != null && !investigacao.getDataInvestigacao().trim().isEmpty()) {
+                ValidacaoNotificacao.validarData(investigacao.getDataInvestigacao(), "Data da investigação");
+            }
+        } catch (IllegalArgumentException e) {
+            Clients.showNotification(e.getMessage(), "error", txtData, "before_center", 3000);
+            return;
+        }
         try {
             investigacaoService.gerarPlanoDeAcao(investigacao, notificacao.getSetor(),
                     SessaoUtil.usuarioAtual() != null ? SessaoUtil.usuarioAtual().getId() : null);

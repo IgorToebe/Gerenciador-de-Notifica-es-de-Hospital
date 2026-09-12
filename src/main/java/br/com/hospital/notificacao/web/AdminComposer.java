@@ -1,11 +1,13 @@
 package br.com.hospital.notificacao.web;
 
 import br.com.hospital.notificacao.model.Usuario;
+import br.com.hospital.notificacao.model.Perfil;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.select.SelectorComposer;
 import org.zkoss.zk.ui.select.annotation.Wire;
 import org.zkoss.zul.A;
+import org.zkoss.zul.Button;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Label;
 
@@ -35,8 +37,21 @@ public abstract class AdminComposer extends SelectorComposer<Component> {
         if (!SessaoUtil.estaAutenticado()) {
             return; // AutenticacaoInit já redirecionou; evita NPE ao montar a sidebar
         }
+        if (!podeAcessarPagina()) {
+            Executions.getCurrent().sendRedirect("/admin/painel.zul");
+            return;
+        }
         montarSidebar();
         renderConteudo(conteudo);
+    }
+
+    private boolean podeAcessarPagina() {
+        Usuario usuario = SessaoUtil.usuarioAtual();
+        if (usuario.getPerfil() == Perfil.NSP_GESTOR) {
+            return true;
+        }
+        return "painel".equals(paginaAtiva()) || "lista".equals(paginaAtiva())
+                || "triagem".equals(paginaAtiva()) || "invest".equals(paginaAtiva());
     }
 
     private void montarSidebar() {
@@ -77,6 +92,13 @@ public abstract class AdminComposer extends SelectorComposer<Component> {
     }
 
     protected abstract String paginaAtiva();
+
+    protected void adicionarVoltar(Div conteudo, String destino, String rotulo) {
+        Button voltar = new Button(rotulo);
+        voltar.setStyle("margin-bottom:14px");
+        voltar.addEventListener("onClick", e -> Executions.getCurrent().sendRedirect(destino));
+        conteudo.appendChild(voltar);
+    }
 
     protected abstract void renderConteudo(Div conteudo) throws Exception;
 }

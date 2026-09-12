@@ -101,6 +101,9 @@ public class NotificacaoDAO {
         public StatusNotificacao status;
         public boolean apenasDuplicatas;
         public String texto;
+        public String dataInicial;
+        public String dataFinal;
+        public String gravidade;
         public int pagina = 1;
         public int tamanhoPagina = 10;
     }
@@ -124,8 +127,23 @@ public class NotificacaoDAO {
             params.add(filtro.status.name());
         }
         if (filtro.apenasDuplicatas) {
-            where.append(" AND PRONTUARIO IN (SELECT PRONTUARIO FROM NOTIFICACAO ")
-                 .append(" WHERE PRONTUARIO IS NOT NULL AND PRONTUARIO <> '' GROUP BY PRONTUARIO HAVING COUNT(*) > 1) ");
+            where.append(" AND EXISTS (SELECT 1 FROM NOTIFICACAO n2 WHERE n2.PRONTUARIO = NOTIFICACAO.PRONTUARIO " +
+                    "AND COALESCE(n2.GRAVIDADE, '') = COALESCE(NOTIFICACAO.GRAVIDADE, '') " +
+                    "GROUP BY n2.PRONTUARIO, n2.GRAVIDADE HAVING COUNT(*) > 1) ");
+        }
+        if (filtro.dataInicial != null && !filtro.dataInicial.trim().isEmpty()) {
+            where.append(" AND DATE(TIMESTAMP_FORMAT(DATA_INCIDENTE, 'DD/MM/YYYY')) >= " +
+                    "DATE(TIMESTAMP_FORMAT(?, 'DD/MM/YYYY')) ");
+            params.add(filtro.dataInicial.trim());
+        }
+        if (filtro.dataFinal != null && !filtro.dataFinal.trim().isEmpty()) {
+            where.append(" AND DATE(TIMESTAMP_FORMAT(DATA_INCIDENTE, 'DD/MM/YYYY')) <= " +
+                    "DATE(TIMESTAMP_FORMAT(?, 'DD/MM/YYYY')) ");
+            params.add(filtro.dataFinal.trim());
+        }
+        if (filtro.gravidade != null && !filtro.gravidade.trim().isEmpty()) {
+            where.append(" AND GRAVIDADE = ? ");
+            params.add(filtro.gravidade.trim());
         }
         if (filtro.texto != null && !filtro.texto.trim().isEmpty()) {
             String like = "%" + filtro.texto.trim().toUpperCase() + "%";
@@ -166,19 +184,23 @@ public class NotificacaoDAO {
 
     /** Quantidade de notificacoes por numero de prontuario, apenas os que se repetem (duplicatas). */
     public Map<String, Integer> contarDuplicatasPorProntuario() {
-        String sql = "SELECT PRONTUARIO, COUNT(*) AS QTD FROM NOTIFICACAO " +
-                "WHERE PRONTUARIO IS NOT NULL AND PRONTUARIO <> '' GROUP BY PRONTUARIO HAVING COUNT(*) > 1";
+        String sql = "SELECT PRONTUARIO, GRAVIDADE, COUNT(*) AS QTD FROM NOTIFICACAO " +
+            "WHERE PRONTUARIO IS NOT NULL AND PRONTUARIO <> '' GROUP BY PRONTUARIO, GRAVIDADE HAVING COUNT(*) > 1";
         Map<String, Integer> resultado = new HashMap<>();
         try (Connection con = DataSourceFactory.obterConexao();
              Statement st = con.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
             while (rs.next()) {
-                resultado.put(rs.getString("PRONTUARIO"), rs.getInt("QTD"));
+                resultado.put(chaveDuplicidade(rs.getString("PRONTUARIO"), rs.getString("GRAVIDADE")), rs.getInt("QTD"));
             }
             return resultado;
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao contar duplicatas por prontuario", e);
         }
+    }
+
+    public static String chaveDuplicidade(String prontuario, String gravidade) {
+        return prontuario + "\u0000" + (gravidade == null ? "" : gravidade);
     }
 
     public Map<StatusNotificacao, Integer> contarPorStatus() {
