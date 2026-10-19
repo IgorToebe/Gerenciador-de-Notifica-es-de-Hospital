@@ -13,6 +13,9 @@ FROM tomcat:9.0-jre11-temurin
 # Permite que a JVM gerencie a memória adequadamente dentro do container (Máximo de 75% da RAM alocada no Code Engine)
 ENV JAVA_OPTS="-XX:MaxRAMPercentage=75.0"
 
+# Redireciona os erros de inicialização de listeners e contexto para o ConsoleHandler (stdout)
+RUN echo "org.apache.catalina.core.ContainerBase.[Catalina].[localhost].handlers = java.util.logging.ConsoleHandler" >> /usr/local/tomcat/conf/logging.properties
+
 # Limpa todas as aplicações padrão do Tomcat
 RUN rm -rf /usr/local/tomcat/webapps/*
 
@@ -20,7 +23,6 @@ RUN rm -rf /usr/local/tomcat/webapps/*
 COPY --from=build /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
 
 EXPOSE 8080
-CMD ["catalina.sh", "run"]
 
-# Redireciona os logs de contexto da aplicação para a saída padrão (stdout)
-RUN echo "org.apache.catalina.core.ContainerBase.[Catalina].[localhost].level = FINE" >> /usr/local/tomcat/conf/logging.properties
+# O CMD deve ser sempre a última instrução do Dockerfile
+CMD ["catalina.sh", "run"]
