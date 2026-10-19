@@ -21,3 +21,6 @@ COPY --from=build /app/target/*.war /usr/local/tomcat/webapps/ROOT.war
 
 EXPOSE 8080
 CMD ["catalina.sh", "run"]
+
+# Redireciona os logs de contexto da aplicação para a saída padrão (stdout)
+RUN echo "org.apache.catalina.core.ContainerBase.[Catalina].[localhost].level = FINE" >> /usr/local/tomcat/conf/logging.properties
