@@ -35,6 +35,12 @@
       <artifactId>zkbind</artifactId>
       <version>${zk.version}</version>
     </dependency>
+    <!-- Módulo essencial para suporte a WebListeners e servlets do ZK -->
+    <dependency>
+      <groupId>org.zkoss.zk</groupId>
+      <artifactId>zkplus</artifactId>
+      <version>${zk.version}</version>
+    </dependency>
 
     <dependency>
       <groupId>javax.servlet</groupId>
@@ -49,15 +55,14 @@
       <version>12.1.4.0</version>
     </dependency>
 
-    <!-- Pool de conexões: sem ele cada operação paga 200-500ms de handshake do DB2,
-         inviabilizando o critério de aceitação de resposta em até 5 segundos. -->
+    <!-- Pool de conexões HikariCP -->
     <dependency>
       <groupId>com.zaxxer</groupId>
       <artifactId>HikariCP</artifactId>
       <version>5.1.0</version>
     </dependency>
 
-    <!-- Geração dos QR Codes dos canais de notificação -->
+    <!-- Geração de QR Codes -->
     <dependency>
       <groupId>com.google.zxing</groupId>
       <artifactId>core</artifactId>
@@ -69,6 +74,7 @@
       <version>3.5.3</version>
     </dependency>
 
+    <!-- Logging para JUL/Console do Tomcat -->
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-jdk14</artifactId>
@@ -82,8 +88,6 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
-
-
 
   <build>
     <finalName>ROOT</finalName>
