@@ -74,9 +74,26 @@ public final class DataSourceFactory {
     }
 
     public static synchronized void encerrar() {
-        if (dataSource != null) {
+    if (dataSource != null) {
+        try {
             dataSource.close();
             dataSource = null;
+            LOGGER.info("Pool HikariCP fechado com sucesso.");
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Erro ao fechar o HikariDataSource", e);
         }
+    }
+    
+    // Desregistra drivers JDBC para evitar IllegalStateException no classloader
+    java.util.Enumeration<java.sql.Driver> drivers = java.sql.DriverManager.getDrivers();
+    while (drivers.hasMoreElements()) {
+        java.sql.Driver driver = drivers.nextElement();
+        try {
+            java.sql.DriverManager.deregisterDriver(driver);
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Erro ao desregistrar driver JDBC: " + driver, e);
+        }
+    }
+}
     }
 }
