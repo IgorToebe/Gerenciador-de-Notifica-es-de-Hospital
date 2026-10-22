@@ -1,0 +1,126 @@
+diff --git a/src/main/java/br/com/hospital/notificacao/config/AppInitListener.java b/src/main/java/br/com/hospital/notificacao/config/AppInitListener.java
+index 8b4d6cd..b36c06f 100644
+--- a/src/main/java/br/com/hospital/notificacao/config/AppInitListener.java
++++ b/src/main/java/br/com/hospital/notificacao/config/AppInitListener.java
+@@ -12,8 +12,17 @@ public class AppInitListener implements ServletContextListener {
+     @Override
+     public void contextInitialized(ServletContextEvent sce) {
+         DataSourceFactory.inicializar();
+-        SchemaInitializer.executar();
+-        SeedData.aplicar();
++        // Se o banco/segredos estiverem incorretos, nao derruba o contexto inteiro
++        // (o Tomcat responderia 404 em tudo). O erro fica visivel nos logs.
++        try {
++            SchemaInitializer.executar();
++            SeedData.aplicar();
++        } catch (RuntimeException e) {
++            java.util.logging.Logger.getLogger(AppInitListener.class.getName())
++                    .log(java.util.logging.Level.SEVERE,
++                            "Falha ao inicializar schema/seed no DB2. Verifique DB2_HOST, DB2_PORT, DB2_DATABASE, "
++                            + "DB2_USER, DB2_PASSWORD, DB2_SSL e ADMIN_SENHA_INICIAL.", e);
++        }
+     }
+ 
+     @Override
+diff --git a/src/main/java/br/com/hospital/notificacao/config/DataSourceFactory.java b/src/main/java/br/com/hospital/notificacao/config/DataSourceFactory.java
+index ac89e7c..9e6f56e 100644
+--- a/src/main/java/br/com/hospital/notificacao/config/DataSourceFactory.java
++++ b/src/main/java/br/com/hospital/notificacao/config/DataSourceFactory.java
+@@ -29,6 +29,8 @@ public final class DataSourceFactory {
+         String database = env("DB2_DATABASE", "HOSPITAL");
+         String usuario = env("DB2_USER", "db2inst1");
+         String senha = System.getenv("DB2_PASSWORD");
++        // IBM Db2 on Cloud exige SSL (porta 50001). Defina DB2_SSL=true para habilitar.
++        boolean ssl = "true".equalsIgnoreCase(env("DB2_SSL", "false"));
+ 
+         if (senha == null || senha.trim().isEmpty()) {
+             LOGGER.log(Level.SEVERE, "ATENÇÃO: A variável de ambiente DB2_PASSWORD não foi informada!");
+@@ -37,7 +39,8 @@ public final class DataSourceFactory {
+         }
+ 
+         HikariConfig config = new HikariConfig();
+-        config.setJdbcUrl("jdbc:db2://" + host + ":" + porta + "/" + database);
++        config.setJdbcUrl("jdbc:db2://" + host + ":" + porta + "/" + database
++                + (ssl ? ":sslConnection=true;" : ""));
+         config.setUsername(usuario);
+         config.setPassword(senha);
+         config.setDriverClassName("com.ibm.db2.jcc.DB2Driver");
+@@ -74,26 +77,25 @@ public final class DataSourceFactory {
+     }
+ 
+     public static synchronized void encerrar() {
+-    if (dataSource != null) {
+-        try {
+-            dataSource.close();
+-            dataSource = null;
+-            LOGGER.info("Pool HikariCP fechado com sucesso.");
+-        } catch (Exception e) {
+-            LOGGER.log(Level.SEVERE, "Erro ao fechar o HikariDataSource", e);
++        if (dataSource != null) {
++            try {
++                dataSource.close();
++                dataSource = null;
++                LOGGER.info("Pool HikariCP fechado com sucesso.");
++            } catch (Exception e) {
++                LOGGER.log(Level.SEVERE, "Erro ao fechar o HikariDataSource", e);
++            }
+         }
+-    }
+-    
+-    // Desregistra drivers JDBC para evitar IllegalStateException no classloader
+-    java.util.Enumeration<java.sql.Driver> drivers = java.sql.DriverManager.getDrivers();
+-    while (drivers.hasMoreElements()) {
+-        java.sql.Driver driver = drivers.nextElement();
+-        try {
+-            java.sql.DriverManager.deregisterDriver(driver);
+-        } catch (Exception e) {
+-            LOGGER.log(Level.SEVERE, "Erro ao desregistrar driver JDBC: " + driver, e);
++
++        // Desregistra drivers JDBC para evitar vazamento de classloader no redeploy
++        java.util.Enumeration<java.sql.Driver> drivers = java.sql.DriverManager.getDrivers();
++        while (drivers.hasMoreElements()) {
++            java.sql.Driver driver = drivers.nextElement();
++            try {
++                java.sql.DriverManager.deregisterDriver(driver);
++            } catch (Exception e) {
++                LOGGER.log(Level.SEVERE, "Erro ao desregistrar driver JDBC: " + driver, e);
++            }
+         }
+     }
+-}
+-    }
+ }
+diff --git a/src/main/java/br/com/hospital/notificacao/config/WebListener.java b/src/main/java/br/com/hospital/notificacao/config/WebListener.java
+deleted file mode 100644
+index 5c84632..0000000
+--- a/src/main/java/br/com/hospital/notificacao/config/WebListener.java
++++ /dev/null
+@@ -1,28 +0,0 @@
+-package br.com.hospital.notificacao.config;
+-
+-import javax.servlet.ServletContextEvent;
+-import javax.servlet.ServletContextListener;
+-import javax.servlet.annotation.WebListener;
+-import java.util.logging.Logger;
+-
+-@WebListener
+-public class AppContextListener implements ServletContextListener {
+-
+-    private static final Logger LOGGER = Logger.getLogger(AppContextListener.class.getName());
+-
+-    @Override
+-    public void contextInitialized(ServletContextEvent sce) {
+-        LOGGER.info("Inicializando o contexto da aplicação e o pool de conexões...");
+-        try {
+-            DataSourceFactory.inicializar();
+-        } catch (Exception e) {
+-            LOGGER.severe("Erro ao carregar DataSourceFactory no boot: " + e.getMessage());
+-        }
+-    }
+-
+-    @Override
+-    public void contextDestroyed(ServletContextEvent sce) {
+-        LOGGER.info("Encerrando o contexto da aplicação e fechando o pool HikariCP...");
+-        DataSourceFactory.encerrar();
+-    }
+-}

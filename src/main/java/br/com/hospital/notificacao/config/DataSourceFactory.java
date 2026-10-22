@@ -29,6 +29,8 @@ public final class DataSourceFactory {
         String database = env("DB2_DATABASE", "HOSPITAL");
         String usuario = env("DB2_USER", "db2inst1");
         String senha = System.getenv("DB2_PASSWORD");
+        // IBM Db2 on Cloud exige SSL (porta 50001). Defina DB2_SSL=true para habilitar.
+        boolean ssl = "true".equalsIgnoreCase(env("DB2_SSL", "false"));
 
         if (senha == null || senha.trim().isEmpty()) {
             LOGGER.log(Level.SEVERE, "ATENÇÃO: A variável de ambiente DB2_PASSWORD não foi informada!");
@@ -37,7 +39,8 @@ public final class DataSourceFactory {
         }
 
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:db2://" + host + ":" + porta + "/" + database);
+        config.setJdbcUrl("jdbc:db2://" + host + ":" + porta + "/" + database
+                + (ssl ? ":sslConnection=true;" : ""));
         config.setUsername(usuario);
         config.setPassword(senha);
         config.setDriverClassName("com.ibm.db2.jcc.DB2Driver");
@@ -74,26 +77,25 @@ public final class DataSourceFactory {
     }
 
     public static synchronized void encerrar() {
-    if (dataSource != null) {
-        try {
-            dataSource.close();
-            dataSource = null;
-            LOGGER.info("Pool HikariCP fechado com sucesso.");
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Erro ao fechar o HikariDataSource", e);
+        if (dataSource != null) {
+            try {
+                dataSource.close();
+                dataSource = null;
+                LOGGER.info("Pool HikariCP fechado com sucesso.");
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Erro ao fechar o HikariDataSource", e);
+            }
         }
-    }
-    
-    // Desregistra drivers JDBC para evitar IllegalStateException no classloader
-    java.util.Enumeration<java.sql.Driver> drivers = java.sql.DriverManager.getDrivers();
-    while (drivers.hasMoreElements()) {
-        java.sql.Driver driver = drivers.nextElement();
-        try {
-            java.sql.DriverManager.deregisterDriver(driver);
-        } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Erro ao desregistrar driver JDBC: " + driver, e);
+
+        // Desregistra drivers JDBC para evitar vazamento de classloader no redeploy
+        java.util.Enumeration<java.sql.Driver> drivers = java.sql.DriverManager.getDrivers();
+        while (drivers.hasMoreElements()) {
+            java.sql.Driver driver = drivers.nextElement();
+            try {
+                java.sql.DriverManager.deregisterDriver(driver);
+            } catch (Exception e) {
+                LOGGER.log(Level.SEVERE, "Erro ao desregistrar driver JDBC: " + driver, e);
+            }
         }
-    }
-}
     }
 }
