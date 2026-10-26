@@ -62,7 +62,7 @@ Aberto → Em triagem → Em investigação → Plano em execução → Concluí
 1. **Abertura** ([WizardComposer](src/main/java/br/com/hospital/notificacao/web/WizardComposer.java)): wizard de 4 passos (sigilo/LGPD → dados do incidente → descrição/anexos → contato opcional). No passo 2 o notificante escolhe o **problema (subgrupo)** do tipo, obrigatório. Na Tecnovigilância o **Registro ANVISA é obrigatório**. Gera protocolo (`#TC-2026-004821`) e senha de acompanhamento, exibidos uma única vez.
 2. **Triagem** ([TriagemComposer](src/main/java/br/com/hospital/notificacao/web/TriagemComposer.java)): resumo com link para os detalhes completos, painel de reclassificação, matriz de risco Probabilidade × Impacto (5×5) e detecção de duplicatas por prontuário. "Iniciar investigação" exige problema, classificação e risco definidos.
 3. **Investigação** ([InvestigacaoComposer](src/main/java/br/com/hospital/notificacao/web/InvestigacaoComposer.java)): FOR-NSP-014. Começa pela seção **0 · Classificação do incidente** (problema, classificação e risco, editáveis), seguida da timeline do incidente, dos 6 fatores contribuintes (Protocolo de Londres) e dos 5 Porquês. A causa raiz (5º porquê) é **obrigatória** para gerar o plano de ação.
-4. **Plano de ação** ([PlanoComposer](src/main/java/br/com/hospital/notificacao/web/PlanoComposer.java)): 5W2H editável (SGQ-001). A notificação só pode ser concluída quando todas as ações estiverem Concluídas ou Canceladas.
+4. **Plano de ação** ([PlanoComposer](src/main/java/br/com/hospital/notificacao/web/PlanoComposer.java)): 5W2H editável (SGQ-001). A notificação só pode ser concluída **por um gestor** (`NSP_GESTOR`) e quando todas as ações estiverem Canceladas ou Concluídas com o 5W2H preenchido (o quê, quem, onde, por quê, como). Cada etapa só avança a partir do status anterior correto.
 
 ### Problema, classificação e risco
 
@@ -174,8 +174,8 @@ No primeiro start (tabela `USUARIO` vazia), o sistema semeia 2 usuários
 | `ana.qualidade` | NSP_GESTOR |
 | `carlos.nsp` | NSP_ANALISTA |
 
-A senha inicial dos dois vem da variável de ambiente `ADMIN_SENHA_INICIAL` (padrão
-`TrocarSenha@2026` se a variável não for definida). **Troque essa senha antes de qualquer
+A senha inicial dos dois vem da variável de ambiente `ADMIN_SENHA_INICIAL`, que é
+**obrigatória**: sem ela o seed falha e a aplicação não sobe, porque não existe senha padrão. **Troque essa senha antes de qualquer
 uso real** — a V1 não tem tela de troca de senha pela UI (ver `ROADMAP-V2.md`); trocar
 exige atualizar o hash diretamente no banco ou reimplantar com um novo seed.
 
@@ -190,7 +190,7 @@ exige atualizar o hash diretamente no banco ou reimplantar com um novo seed.
 | `DB2_PASSWORD` | — | **sim** | Senha do DB2 |
 | `DB2INST1_PASSWORD` | — | sim (no Compose) | Senha de criação da instância DB2 |
 | `ANEXOS_DIR` | `/app/anexos` (dev: pasta temp do SO) | não | Diretório dos anexos |
-| `ADMIN_SENHA_INICIAL` | `TrocarSenha@2026` | não | Senha dos 2 usuários seed |
+| `ADMIN_SENHA_INICIAL` | — | **sim** | Senha dos 2 usuários seed |
 
 Copie `.env.example` para `.env` (não versionado) antes de rodar.
 

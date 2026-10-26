@@ -2,6 +2,7 @@ package br.com.hospital.notificacao.web;
 
 import br.com.hospital.notificacao.dao.NotificacaoDAO;
 import br.com.hospital.notificacao.model.Notificacao;
+import br.com.hospital.notificacao.model.Usuario;
 import br.com.hospital.notificacao.service.DetalheNotificacao;
 import br.com.hospital.notificacao.service.NotificacaoService;
 import br.com.hospital.notificacao.service.RelatorioNotificacaoService;
@@ -36,7 +37,9 @@ public class ExportacaoServlet extends HttpServlet {
 
     @Override
     protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-        if (SessaoUtil.usuarioDaSessaoHttp(req.getSession(false)) == null) {
+        // Mesmo criterio do AnexoServlet: sessao com usuario ativo do NSP.
+        Usuario usuario = SessaoUtil.usuarioDaSessaoHttp(req.getSession(false));
+        if (usuario == null || !usuario.isAtivo()) {
             resp.sendRedirect(req.getContextPath() + "/login.zul");
             return;
         }

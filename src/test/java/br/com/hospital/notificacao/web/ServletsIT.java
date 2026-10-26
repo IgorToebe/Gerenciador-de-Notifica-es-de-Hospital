@@ -58,6 +58,21 @@ class ServletsIT extends IntegracaoBase {
     }
 
     @Test
+    void usuarioDesativadoNaoExportaNemBaixaAnexo() throws Exception {
+        Anexo a = notificacaoComAnexo(new byte[]{1, 2, 3});
+        RespostaCapturada pdf = new RespostaCapturada();
+        exportacao.doGet(RespostaCapturada.requisicao("/notificacao/" + a.getIdNotificacao() + ".pdf", true, false),
+                pdf.resposta);
+        verify(pdf.resposta).sendRedirect("/login.zul");
+        assertEquals(0, pdf.bytes().length);
+
+        RespostaCapturada arquivo = new RespostaCapturada();
+        anexo.doGet(RespostaCapturada.requisicao("/" + a.getId(), true, false), arquivo.resposta);
+        verify(arquivo.resposta).sendRedirect("/login.zul");
+        assertEquals(0, arquivo.bytes().length);
+    }
+
+    @Test
     void exportaUmaNotificacaoEmPdfSemDadosDeContato() throws Exception {
         long id = notificacaoComContato(TipoNotificacao.TECNOVIGILANCIA, "Bomba de infusão parou sem alarme");
         String protocolo = (String) valor("SELECT PROTOCOLO FROM NOTIFICACAO WHERE ID = ?", id);

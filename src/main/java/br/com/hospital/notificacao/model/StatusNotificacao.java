@@ -6,9 +6,9 @@ package br.com.hospital.notificacao.model;
  */
 public enum StatusNotificacao {
     ABERTO("Aberto", "aberto", 1),
-    TRIAGEM("Em triagem", "analise", 2),
-    INVESTIGACAO("Em investigação", "invest", 3),
-    PLANO("Plano em execução", "plano", 4),
+    TRIAGEM("Em análise", "analise", 2),
+    INVESTIGACAO("Investigação da causa raiz", "invest", 3),
+    PLANO("Plano de ação", "plano", 4),
     CONCLUIDO("Concluído", "concl", 5);
 
     private final String rotulo;

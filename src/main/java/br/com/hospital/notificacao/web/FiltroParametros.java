@@ -31,6 +31,8 @@ public final class FiltroParametros {
         adicionar(sb, "risco", f.nivelRisco != null ? f.nivelRisco.name() : null);
         adicionar(sb, "prontuario", f.prontuario);
         adicionar(sb, "setor", f.setor);
+        adicionar(sb, "incidenteDe", f.dataInicial);
+        adicionar(sb, "incidenteAte", f.dataFinal);
         adicionar(sb, "de", f.dataDe != null ? f.dataDe.toString() : null);
         adicionar(sb, "ate", f.dataAte != null ? f.dataAte.toString() : null);
         adicionar(sb, "ordem", f.ordenacao != null ? f.ordenacao.name() : null);
@@ -50,6 +52,8 @@ public final class FiltroParametros {
         f.nivelRisco = enumOuNulo(NivelRisco.class, parametro.apply("risco"));
         f.prontuario = vazioParaNulo(parametro.apply("prontuario"));
         f.setor = vazioParaNulo(parametro.apply("setor"));
+        f.dataInicial = vazioParaNulo(parametro.apply("incidenteDe"));
+        f.dataFinal = vazioParaNulo(parametro.apply("incidenteAte"));
         f.dataDe = dataOuNula(parametro.apply("de"));
         f.dataAte = dataOuNula(parametro.apply("ate"));
         NotificacaoDAO.Ordenacao ordem = enumOuNulo(NotificacaoDAO.Ordenacao.class, parametro.apply("ordem"));

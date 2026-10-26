@@ -22,6 +22,11 @@ public class LoginComposer extends SelectorComposer<Component> {
     private final AutenticacaoService autenticacaoService = new AutenticacaoService();
     private int tentativas = 0;
 
+    @Listen("onClick = #btnVoltar")
+    public void voltar() {
+        Executions.getCurrent().sendRedirect("/index.zul");
+    }
+
     @Listen("onClick = #btnEntrar")
     public void entrar() {
         if (tentativas >= 5) {

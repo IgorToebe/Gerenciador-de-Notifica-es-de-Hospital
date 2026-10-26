@@ -39,6 +39,8 @@ class FiltroParametrosTest {
         f.nivelRisco = NivelRisco.ALTO;
         f.prontuario = "123";
         f.setor = "UTI Adulto";
+        f.dataInicial = "01/02/2026";
+        f.dataFinal = "28/02/2026";
         f.dataDe = LocalDate.of(2026, 1, 1);
         f.dataAte = LocalDate.of(2026, 3, 31);
         f.ordenacao = NotificacaoDAO.Ordenacao.MAIOR_RISCO;
@@ -54,6 +56,8 @@ class FiltroParametrosTest {
         assertEquals(f.nivelRisco, volta.nivelRisco);
         assertEquals(f.prontuario, volta.prontuario);
         assertEquals(f.setor, volta.setor);
+        assertEquals(f.dataInicial, volta.dataInicial);
+        assertEquals(f.dataFinal, volta.dataFinal);
         assertEquals(f.dataDe, volta.dataDe);
         assertEquals(f.dataAte, volta.dataAte);
         assertEquals(f.ordenacao, volta.ordenacao);

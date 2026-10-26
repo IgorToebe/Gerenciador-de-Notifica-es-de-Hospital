@@ -3,7 +3,9 @@ package br.com.hospital.notificacao.integracao;
 import br.com.hospital.notificacao.config.DataSourceFactory;
 import br.com.hospital.notificacao.config.SchemaInitializer;
 import br.com.hospital.notificacao.model.ClassificacaoIncidente;
+import br.com.hospital.notificacao.model.Perfil;
 import br.com.hospital.notificacao.model.TipoNotificacao;
+import br.com.hospital.notificacao.service.HashSenha;
 import br.com.hospital.notificacao.service.NotificacaoService;
 import br.com.hospital.notificacao.service.NovaNotificacaoRequest;
 import br.com.hospital.notificacao.service.ResultadoNotificacao;
@@ -121,6 +123,14 @@ public abstract class IntegracaoBase {
 
     protected long criarId(NovaNotificacaoRequest req) {
         return idPorProtocolo(criar(req).getProtocolo());
+    }
+
+    /** Cria um usuario do NSP direto no banco (o SeedData exige ADMIN_SENHA_INICIAL). */
+    protected static long criarUsuario(String login, Perfil perfil, String senha) {
+        String salt = HashSenha.gerarSalt();
+        executar("INSERT INTO USUARIO (LOGIN, NOME, SENHA_HASH, SALT, PERFIL, ATIVO) VALUES (?, ?, ?, ?, ?, 1)",
+                login, login, HashSenha.gerarHash(senha, salt), salt, perfil.name());
+        return ((Number) valor("SELECT ID FROM USUARIO WHERE LOGIN = ?", login)).longValue();
     }
 
     protected static long idPorProtocolo(String protocolo) {

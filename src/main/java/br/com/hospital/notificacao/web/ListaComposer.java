@@ -8,8 +8,10 @@ import br.com.hospital.notificacao.model.Setores;
 import br.com.hospital.notificacao.model.StatusNotificacao;
 import br.com.hospital.notificacao.model.TipoNotificacao;
 import br.com.hospital.notificacao.service.NotificacaoService;
+import br.com.hospital.notificacao.service.ValidacaoNotificacao;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Executions;
+import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Combobox;
 import org.zkoss.zul.Comboitem;
 import org.zkoss.zul.Datebox;
@@ -25,10 +27,10 @@ import java.util.Set;
 import java.util.function.Consumer;
 
 /**
- * Notificações — lista geral (Item 3): filtros por status, deteccao de duplicatas por
- * prontuario, filtros avancados (tipo, problema, classificacao, risco, setor, prontuario
- * do paciente, periodo), ordenacao, busca e paginacao resolvidas em SQL, e exportacao
- * em PDF do resultado filtrado.
+ * Notificações — lista geral (Item 3): filtros por status, deteccao de duplicatas
+ * (mesmo prontuario e mesma gravidade), periodo do incidente, filtros avancados (tipo,
+ * problema, classificacao, risco, setor, prontuario do paciente, data de recebimento),
+ * ordenacao, busca e paginacao resolvidas em SQL, e exportacao em PDF do resultado filtrado.
  */
 public class ListaComposer extends AdminComposer {
 
@@ -62,7 +64,7 @@ public class ListaComposer extends AdminComposer {
 
     private Div construirBarraFiltros() {
         Div barra = new Div();
-        barra.setStyle("display:flex;justify-content:space-between;align-items:center;gap:14px;margin-bottom:10px;flex-wrap:wrap");
+        barra.setStyle("display:flex;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap");
 
         Div chips = new Div();
         chips.setStyle("display:flex;gap:8px;flex-wrap:wrap");
@@ -89,8 +91,6 @@ public class ListaComposer extends AdminComposer {
         }
         barra.appendChild(chips);
 
-        Div direita = new Div();
-        direita.setStyle("display:flex;gap:10px;align-items:center;flex-wrap:wrap");
         Textbox busca = new Textbox();
         busca.setPlaceholder("Buscar por prontuário, problema, texto, protocolo…");
         busca.setWidth("300px");
@@ -101,7 +101,34 @@ public class ListaComposer extends AdminComposer {
             filtro.pagina = 1;
             atualizarTabela();
         });
-        direita.appendChild(busca);
+        barra.appendChild(busca);
+
+        // Periodo do incidente (data informada pelo notificante).
+        Textbox dataInicial = new Textbox();
+        dataInicial.setPlaceholder("De dd/mm/aaaa");
+        dataInicial.setMaxlength(10);
+        dataInicial.setWidth("120px");
+        dataInicial.setValue(filtro.dataInicial);
+        dataInicial.addEventListener("onChange", event -> aplicarData(dataInicial, true));
+        barra.appendChild(dataInicial);
+        instalarMascaraData(dataInicial);
+
+        Textbox dataFinal = new Textbox();
+        dataFinal.setPlaceholder("Até dd/mm/aaaa");
+        dataFinal.setMaxlength(10);
+        dataFinal.setWidth("120px");
+        dataFinal.setValue(filtro.dataFinal);
+        dataFinal.addEventListener("onChange", event -> aplicarData(dataFinal, false));
+        barra.appendChild(dataFinal);
+        instalarMascaraData(dataFinal);
+
+        Label limpar = new Label("Limpar filtros");
+        limpar.setSclass("nsp-linkbtn");
+        limpar.addEventListener("onClick", event -> {
+            filtro = new NotificacaoDAO.Filtro();
+            montar();
+        });
+        barra.appendChild(limpar);
 
         Label avancados = new Label("Filtros avançados " + (filtrosAbertos ? "▴" : "▾"));
         avancados.setSclass("nsp-btn");
@@ -109,7 +136,7 @@ public class ListaComposer extends AdminComposer {
             filtrosAbertos = !filtrosAbertos;
             montar();
         });
-        direita.appendChild(avancados);
+        barra.appendChild(avancados);
 
         Label exportar = new Label("Exportar PDF");
         exportar.setSclass("nsp-btn nsp-btn-dark");
@@ -117,9 +144,30 @@ public class ListaComposer extends AdminComposer {
             String qs = FiltroParametros.paraQueryString(filtro);
             Executions.getCurrent().sendRedirect("/export/notificacoes.pdf" + (qs.isEmpty() ? "" : "?" + qs), "_blank");
         });
-        direita.appendChild(exportar);
-        barra.appendChild(direita);
+        barra.appendChild(exportar);
         return barra;
+    }
+
+    private void instalarMascaraData(Textbox campo) {
+        String script = "zk.afterMount(function(){var w=zk.Widget.$('" + campo.getUuid() + "');"
+            + "var input=w&&w.getInputNode?w.getInputNode():null;if(input)jq(input).on('input',function(){"
+            + "var v=this.value.replace(/\\D/g,'').slice(0,8);this.value=v.length>2?v.slice(0,2)+'/'+"
+            + "(v.length>4?v.slice(2,4)+'/'+v.slice(4):v.slice(2)):v;});});";
+        Clients.evalJavaScript(script);
+    }
+
+    private void aplicarData(Textbox campo, boolean inicial) {
+        String valor = campo.getValue() == null ? "" : campo.getValue().trim();
+        try {
+            if (!valor.isEmpty()) ValidacaoNotificacao.validarData(valor, inicial ? "Data inicial" : "Data final");
+        } catch (IllegalArgumentException e) {
+            Clients.wrongValue(campo, e.getMessage());
+            return;
+        }
+        if (inicial) filtro.dataInicial = valor.isEmpty() ? null : valor;
+        else filtro.dataFinal = valor.isEmpty() ? null : valor;
+        filtro.pagina = 1;
+        atualizarTabela();
     }
 
     private Div construirFiltrosAvancados() {
@@ -215,17 +263,6 @@ public class ListaComposer extends AdminComposer {
         for (NotificacaoDAO.Ordenacao o : NotificacaoDAO.Ordenacao.values()) {
             adicionarItem(cboOrdem, o.getRotulo(), filtro.ordenacao == o);
         }
-
-        Div limparWrap = new Div();
-        limparWrap.setStyle("display:flex;align-items:flex-end");
-        Label limpar = new Label("Limpar filtros");
-        limpar.setSclass("nsp-linkbtn");
-        limpar.addEventListener("onClick", e -> {
-            filtro = new NotificacaoDAO.Filtro();
-            montar();
-        });
-        limparWrap.appendChild(limpar);
-        painel.appendChild(limparWrap);
         return painel;
     }
 
@@ -314,7 +351,7 @@ public class ListaComposer extends AdminComposer {
 
         Div head = new Div();
         head.setSclass("nsp-thead");
-        head.appendChild(celula("# / Recebida", "90px"));
+        head.appendChild(celula("# / Incidente", "90px"));
         head.appendChild(celula("Tipo", "150px"));
         head.appendChild(celula("Problema", "160px"));
         head.appendChild(celula("Classificação", "150px"));
@@ -331,14 +368,19 @@ public class ListaComposer extends AdminComposer {
         }
 
         for (Notificacao n : resultado.itens) {
-            boolean dup = n.getProntuario() != null && duplicatas.containsKey(n.getProntuario());
+            String chaveDup = n.getProntuario() == null ? null
+                    : NotificacaoDAO.chaveDuplicidade(n.getProntuario(), n.getGravidade());
+            boolean dup = chaveDup != null && duplicatas.containsKey(chaveDup);
             Div linha = new Div();
             linha.setSclass("nsp-row" + (dup ? " dup" : ""));
 
             Div idCelula = celula("#" + n.getId(), "90px");
-            Label recebida = new Label(n.getCriadoEm() != null ? formatoData.format(n.getCriadoEm()) : "");
-            recebida.setStyle("display:block;font-size:10.5px;color:var(--muted)");
-            idCelula.appendChild(recebida);
+            Label datas = new Label(ouTraco(n.getDataIncidente()));
+            datas.setStyle("display:block;font-size:10.5px;color:var(--muted)");
+            if (n.getCriadoEm() != null) {
+                datas.setTooltiptext("Recebida em " + formatoData.format(n.getCriadoEm()));
+            }
+            idCelula.appendChild(datas);
             linha.appendChild(idCelula);
 
             linha.appendChild(envolver(tagTipo(n.getTipo()), "150px"));
@@ -348,7 +390,7 @@ public class ListaComposer extends AdminComposer {
 
             Div prontCelula = celula(ouTraco(n.getProntuario()), "160px");
             if (dup) {
-                Label flag = new Label(duplicatas.get(n.getProntuario()) + " c/ mesmo prontuário");
+                Label flag = new Label(duplicatas.get(chaveDup) + " c/ prontuário e gravidade");
                 flag.setSclass("nsp-dupflag");
                 prontCelula.appendChild(flag);
             }

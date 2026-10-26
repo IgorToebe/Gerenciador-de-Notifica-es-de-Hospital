@@ -74,6 +74,21 @@ class NotificacaoDAOFiltroTest {
     }
 
     @Test
+    void dataDoIncidenteViraTextoOrdenavel() {
+        assertEquals("20260315", NotificacaoDAO.dataOrdenavel(" 15/03/2026 "));
+        assertEquals(null, NotificacaoDAO.dataOrdenavel("15/3/2026"));
+        assertEquals(null, NotificacaoDAO.dataOrdenavel(null));
+
+        NotificacaoDAO.Filtro f = new NotificacaoDAO.Filtro();
+        f.dataInicial = "01/02/2026";
+        f.dataFinal = "inválida"; // a tela valida antes; aqui so' nao entra no filtro
+        List<Object> params = new ArrayList<>();
+        String where = NotificacaoDAO.montarWhere(f, params);
+        assertEquals(Arrays.asList("20260201"), params);
+        assertEquals(1, contarPlaceholders(where));
+    }
+
+    @Test
     void ordenacaoPorClassificacaoUsaOGrauDeGravidade() {
         String sql = NotificacaoDAO.Ordenacao.CLASSIFICACAO.getSql();
         assertTrue(sql.contains("WHEN 'Óbito' THEN 7"));

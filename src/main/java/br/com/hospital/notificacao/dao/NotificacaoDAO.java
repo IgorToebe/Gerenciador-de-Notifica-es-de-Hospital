@@ -141,6 +141,10 @@ public class NotificacaoDAO {
         public NivelRisco nivelRisco;
         public String prontuario;
         public String setor;
+        /** Data do incidente (dd/MM/aaaa), informada pelo notificante. */
+        public String dataInicial;
+        public String dataFinal;
+        /** Data de recebimento da notificacao (CRIADO_EM). */
         public LocalDate dataDe;
         public LocalDate dataAte;
         public Ordenacao ordenacao = Ordenacao.RECENTES;
@@ -159,6 +163,25 @@ public class NotificacaoDAO {
     }
 
     /**
+     * DATA_INCIDENTE (texto dd/MM/aaaa) reescrita como aaaaMMdd, que ordena como data.
+     * Linhas fora do formato (texto livre gravado antes da validacao do wizard) viram NULL
+     * e simplesmente nao entram no filtro, em vez de derrubar a consulta inteira — o que
+     * acontecia com TIMESTAMP_FORMAT. Tambem e' SQL portavel (roda no H2 dos testes).
+     */
+    private static final String DATA_INCIDENTE_ORDENAVEL =
+            "(CASE WHEN LENGTH(DATA_INCIDENTE) = 10 AND SUBSTR(DATA_INCIDENTE, 3, 1) = '/' " +
+            "AND SUBSTR(DATA_INCIDENTE, 6, 1) = '/' THEN SUBSTR(DATA_INCIDENTE, 7, 4) || " +
+            "SUBSTR(DATA_INCIDENTE, 4, 2) || SUBSTR(DATA_INCIDENTE, 1, 2) END)";
+
+    /** "dd/MM/aaaa" -> "aaaaMMdd"; null se o texto nao estiver nesse formato. */
+    static String dataOrdenavel(String ddMMaaaa) {
+        if (ddMMaaaa == null) return null;
+        String v = ddMMaaaa.trim();
+        if (!v.matches("\\d{2}/\\d{2}/\\d{4}")) return null;
+        return v.substring(6, 10) + v.substring(3, 5) + v.substring(0, 2);
+    }
+
+    /**
      * Monta o WHERE da listagem e preenche os parametros na mesma ordem dos "?".
      * Separado de {@link #listar(Filtro)} para ser testavel sem DB2.
      */
@@ -170,8 +193,22 @@ public class NotificacaoDAO {
             params.add(filtro.status.name());
         }
         if (filtro.apenasDuplicatas) {
-            where.append(" AND PRONTUARIO IN (SELECT PRONTUARIO FROM NOTIFICACAO ")
-                 .append(" WHERE PRONTUARIO IS NOT NULL AND PRONTUARIO <> '' GROUP BY PRONTUARIO HAVING COUNT(*) > 1) ");
+            // Duplicata = mesmo prontuario E mesma gravidade. Notificacoes sem prontuario nunca
+            // sao duplicatas entre si (mesmo criterio de contarDuplicatasPorProntuario).
+            where.append(" AND NOTIFICACAO.PRONTUARIO IS NOT NULL AND NOTIFICACAO.PRONTUARIO <> '' ")
+                 .append(" AND EXISTS (SELECT 1 FROM NOTIFICACAO n2 WHERE n2.PRONTUARIO = NOTIFICACAO.PRONTUARIO " +
+                    "AND COALESCE(n2.GRAVIDADE, '') = COALESCE(NOTIFICACAO.GRAVIDADE, '') " +
+                    "GROUP BY n2.PRONTUARIO, n2.GRAVIDADE HAVING COUNT(*) > 1) ");
+        }
+        String incidenteDe = dataOrdenavel(filtro.dataInicial);
+        if (incidenteDe != null) {
+            where.append(" AND ").append(DATA_INCIDENTE_ORDENAVEL).append(" >= ? ");
+            params.add(incidenteDe);
+        }
+        String incidenteAte = dataOrdenavel(filtro.dataFinal);
+        if (incidenteAte != null) {
+            where.append(" AND ").append(DATA_INCIDENTE_ORDENAVEL).append(" <= ? ");
+            params.add(incidenteAte);
         }
         if (filtro.tipo != null) {
             where.append(" AND TIPO = ? ");
@@ -256,19 +293,23 @@ public class NotificacaoDAO {
 
     /** Quantidade de notificacoes por numero de prontuario, apenas os que se repetem (duplicatas). */
     public Map<String, Integer> contarDuplicatasPorProntuario() {
-        String sql = "SELECT PRONTUARIO, COUNT(*) AS QTD FROM NOTIFICACAO " +
-                "WHERE PRONTUARIO IS NOT NULL AND PRONTUARIO <> '' GROUP BY PRONTUARIO HAVING COUNT(*) > 1";
+        String sql = "SELECT PRONTUARIO, GRAVIDADE, COUNT(*) AS QTD FROM NOTIFICACAO " +
+            "WHERE PRONTUARIO IS NOT NULL AND PRONTUARIO <> '' GROUP BY PRONTUARIO, GRAVIDADE HAVING COUNT(*) > 1";
         Map<String, Integer> resultado = new HashMap<>();
         try (Connection con = DataSourceFactory.obterConexao();
              Statement st = con.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
             while (rs.next()) {
-                resultado.put(rs.getString("PRONTUARIO"), rs.getInt("QTD"));
+                resultado.put(chaveDuplicidade(rs.getString("PRONTUARIO"), rs.getString("GRAVIDADE")), rs.getInt("QTD"));
             }
             return resultado;
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao contar duplicatas por prontuario", e);
         }
+    }
+
+    public static String chaveDuplicidade(String prontuario, String gravidade) {
+        return prontuario + "\u0000" + (gravidade == null ? "" : gravidade);
     }
 
     public Map<StatusNotificacao, Integer> contarPorStatus() {

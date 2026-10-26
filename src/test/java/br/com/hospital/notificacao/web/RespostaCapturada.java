@@ -33,8 +33,12 @@ final class RespostaCapturada {
         return corpo.toByteArray();
     }
 
-    /** Requisicao GET com pathInfo e, se {@code logado}, um usuario do NSP na sessao. */
+    /** Requisicao GET com pathInfo e, se {@code logado}, um usuario ativo do NSP na sessao. */
     static HttpServletRequest requisicao(String pathInfo, boolean logado) {
+        return requisicao(pathInfo, logado, true);
+    }
+
+    static HttpServletRequest requisicao(String pathInfo, boolean logado, boolean ativo) {
         HttpServletRequest req = mock(HttpServletRequest.class);
         when(req.getPathInfo()).thenReturn(pathInfo);
         when(req.getContextPath()).thenReturn("");
@@ -43,6 +47,7 @@ final class RespostaCapturada {
             u.setId(1);
             u.setLogin("ana.qualidade");
             u.setPerfil(Perfil.NSP_GESTOR);
+            u.setAtivo(ativo);
             HttpSession sessao = mock(HttpSession.class);
             when(sessao.getAttribute(anyString())).thenReturn(u);
             when(req.getSession(false)).thenReturn(sessao);

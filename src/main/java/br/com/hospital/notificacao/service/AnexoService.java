@@ -46,7 +46,7 @@ public class AnexoService {
     }
 
     /** Grava o arquivo fisico e o metadado, dentro da mesma transacao da notificacao. */
-    public void salvar(Connection con, long idNotificacao, String nomeOriginal, String mime, byte[] conteudo)
+    public String salvar(Connection con, long idNotificacao, String nomeOriginal, String mime, byte[] conteudo)
             throws SQLException {
         if (conteudo.length > TAMANHO_MAXIMO_BYTES) {
             throw new IllegalArgumentException("Arquivo excede o limite de 10 MB");
@@ -69,7 +69,22 @@ public class AnexoService {
         a.setNomeFisico(nomeFisico);
         a.setTipoArquivo(mime);
         a.setTamanhoBytes(conteudo.length);
-        anexoDAO.inserir(con, a);
+        try {
+            anexoDAO.inserir(con, a);
+        } catch (SQLException e) {
+            excluirFisico(nomeFisico);
+            throw e;
+        }
+        return nomeFisico;
+    }
+
+    public void excluirFisico(String nomeFisico) {
+        if (nomeFisico == null || nomeFisico.trim().isEmpty()) return;
+        try {
+            Files.deleteIfExists(diretorioAnexos().resolve(nomeFisico));
+        } catch (IOException e) {
+            throw new RuntimeException("Erro ao remover anexo físico após rollback", e);
+        }
     }
 
     public Optional<byte[]> lerConteudo(String nomeFisico) {

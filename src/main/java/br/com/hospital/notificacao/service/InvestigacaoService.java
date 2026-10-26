@@ -53,11 +53,11 @@ public class InvestigacaoService {
         if (inv.getCausaRaiz() == null || inv.getCausaRaiz().trim().isEmpty()) {
             throw new IllegalStateException("É obrigatório registrar a causa raiz (5º Porquê) para gerar o plano de ação");
         }
-        inv.setConcluida(true);
-        investigacaoDAO.salvar(inv);
-
         Notificacao n = notificacaoDAO.buscarPorId(inv.getIdNotificacao())
                 .orElseThrow(() -> new IllegalArgumentException("Notificação não encontrada: " + inv.getIdNotificacao()));
+        if (n.getStatus() != StatusNotificacao.INVESTIGACAO) {
+            throw new IllegalStateException("A notificação não está em investigação");
+        }
         StatusNotificacao statusAnterior = n.getStatus();
 
         if (!planoAcaoDAO.existePlano(inv.getIdNotificacao())) {
@@ -70,16 +70,38 @@ public class InvestigacaoService {
             primeira.setPorque(inv.getCausaRaiz());
             primeira.setComo("");
             primeira.setQuanto("R$ 0,00");
-            primeira.setDataInicio("—");
-            primeira.setDataFim("—");
+            primeira.setDataInicio("");
+            primeira.setDataFim("");
             primeira.setStatus(StatusAcao.INICIAR);
             primeira.setOrdem(1);
-            planoAcaoDAO.inserir(primeira);
+            try (Connection con = DataSourceFactory.obterConexao()) {
+                con.setAutoCommit(false);
+                try {
+                    inv.setConcluida(true);
+                    investigacaoDAO.salvar(con, inv);
+                    planoAcaoDAO.inserir(con, primeira);
+                    notificacaoDAO.atualizarStatus(con, n.getId(), StatusNotificacao.PLANO);
+                    historicoDAO.inserir(con, n.getId(), statusAnterior, StatusNotificacao.PLANO, idUsuario,
+                            "Plano de ação gerado a partir da causa raiz identificada");
+                    con.commit();
+                } catch (RuntimeException | SQLException e) {
+                    con.rollback();
+                    throw (e instanceof RuntimeException) ? (RuntimeException) e
+                            : new RuntimeException("Erro ao gerar plano de ação", e);
+                } finally {
+                    con.setAutoCommit(true);
+                }
+            } catch (SQLException e) {
+                throw new RuntimeException("Erro ao abrir conexão para gerar plano de ação", e);
+            }
+            return;
         }
 
         try (Connection con = DataSourceFactory.obterConexao()) {
             con.setAutoCommit(false);
             try {
+                inv.setConcluida(true);
+                investigacaoDAO.salvar(con, inv);
                 notificacaoDAO.atualizarStatus(con, n.getId(), StatusNotificacao.PLANO);
                 historicoDAO.inserir(con, n.getId(), statusAnterior, StatusNotificacao.PLANO, idUsuario,
                         "Plano de ação gerado a partir da causa raiz identificada");

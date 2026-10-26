@@ -34,6 +34,9 @@ public class TriagemService {
         int score = MatrizRisco.calcularScore(probabilidade, impacto);
         NivelRisco nivel = NivelRisco.doScore(score);
         StatusNotificacao statusAnterior = atual.getStatus();
+        if (statusAnterior != StatusNotificacao.ABERTO && statusAnterior != StatusNotificacao.TRIAGEM) {
+            throw new IllegalStateException("A notificação não está disponível para triagem");
+        }
         StatusNotificacao novoStatus = statusAnterior == StatusNotificacao.ABERTO
                 ? StatusNotificacao.TRIAGEM : statusAnterior;
 
@@ -67,6 +70,9 @@ public class TriagemService {
         Notificacao atual = notificacaoDAO.buscarPorId(idNotificacao)
                 .orElseThrow(() -> new IllegalArgumentException("Notificação não encontrada: " + idNotificacao));
         StatusNotificacao statusAnterior = atual.getStatus();
+        if (statusAnterior != StatusNotificacao.ABERTO && statusAnterior != StatusNotificacao.TRIAGEM) {
+            throw new IllegalStateException("A notificação não está disponível para iniciar investigação");
+        }
 
         try (Connection con = DataSourceFactory.obterConexao()) {
             con.setAutoCommit(false);

@@ -157,13 +157,45 @@ class ListagemFiltrosIT extends IntegracaoBase {
     }
 
     @Test
-    void filtraSomenteDuplicatasPorProntuario() {
+    void duplicataEhMesmoProntuarioEMesmaGravidade() {
         NotificacaoDAO.Filtro f = filtro();
         f.apenasDuplicatas = true;
-        assertEquals(idsOrdenados(erroMedicacao, queda), ids(f));
+        assertTrue(ids(f).isEmpty(), "queda e erroMedicacao têm o prontuário 111, mas gravidades diferentes");
+
+        long outraQueda = criarCom(TipoNotificacao.PROBLEMAS_ASSISTENCIAIS, "Queda", "Dano grave", "111", "UTI Adulto",
+                "Segunda queda do mesmo paciente");
+        assertEquals(idsOrdenados(outraQueda, queda), ids(f));
+
         Map<String, Integer> dup = notificacaoService.contarDuplicatasPorProntuario();
         assertEquals(1, dup.size());
-        assertEquals(Integer.valueOf(2), dup.get("111"));
+        assertEquals(Integer.valueOf(2), dup.get(NotificacaoDAO.chaveDuplicidade("111", "Dano grave")));
+    }
+
+    @Test
+    void notificacoesSemProntuarioNuncaSaoDuplicatas() {
+        // reacao ja' nao tem prontuario; outra sem prontuario e com a mesma gravidade (Obito)
+        criarCom(TipoNotificacao.FARMACOVIGILANCIA, "Reação adversa", "Óbito", "", "Farmácia", "Outro óbito");
+        NotificacaoDAO.Filtro f = filtro();
+        f.apenasDuplicatas = true;
+        assertTrue(ids(f).isEmpty());
+        assertTrue(notificacaoService.contarDuplicatasPorProntuario().isEmpty());
+    }
+
+    @Test
+    void filtraPeloPeriodoDoIncidente() {
+        executar("UPDATE NOTIFICACAO SET DATA_INCIDENTE = '05/01/2026' WHERE ID = ?", queda);
+        executar("UPDATE NOTIFICACAO SET DATA_INCIDENTE = '28/02/2026' WHERE ID = ?", flebite);
+        executar("UPDATE NOTIFICACAO SET DATA_INCIDENTE = '01/03/2026' WHERE ID = ?", erroMedicacao);
+        executar("UPDATE NOTIFICACAO SET DATA_INCIDENTE = 'ontem' WHERE ID = ?", reacao); // texto livre da V1
+
+        NotificacaoDAO.Filtro f = filtro();
+        f.dataInicial = "01/02/2026";
+        f.dataFinal = "01/03/2026";
+        assertEquals(idsOrdenados(erroMedicacao, flebite), ids(f), "inclui as duas pontas e compara como data, não texto");
+
+        NotificacaoDAO.Filtro so = filtro();
+        so.dataFinal = "31/01/2026";
+        assertEquals(idsOrdenados(queda), ids(so), "data fora do formato é ignorada sem derrubar a consulta");
     }
 
     @Test

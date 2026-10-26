@@ -7,6 +7,7 @@ import br.com.hospital.notificacao.model.StatusAcao;
 import br.com.hospital.notificacao.model.StatusNotificacao;
 import br.com.hospital.notificacao.service.NotificacaoService;
 import br.com.hospital.notificacao.service.PlanoAcaoService;
+import br.com.hospital.notificacao.service.ValidacaoNotificacao;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.util.Clients;
 import org.zkoss.zul.Combobox;
@@ -35,6 +36,7 @@ public class PlanoComposer extends AdminComposer {
 
     @Override
     protected void renderConteudo(Div conteudo) {
+        adicionarVoltar(conteudo, "/admin/notificacoes.zul", "← Voltar para notificações");
         notificacao = carregarNotificacao();
         if (notificacao == null) {
             Label vazio = new Label("Nenhum plano de ação gerado ainda. Conclua uma investigação para gerar.");
@@ -155,12 +157,22 @@ public class PlanoComposer extends AdminComposer {
             Div linha = new Div();
             linha.setSclass("nsp-row");
             linha.appendChild(textoCelula(a.getCodigo(), "60"));
-            linha.appendChild(textoCelula(a.getoQue(), "170"));
-            linha.appendChild(textoCelula(a.getQuem(), "120"));
-            linha.appendChild(textoCelula(a.getOnde(), "110"));
-            linha.appendChild(textoCelula(a.getPorque(), "170"));
-            linha.appendChild(textoCelula(a.getComo(), "150"));
-            linha.appendChild(textoCelula(a.getDataInicio() + " → " + a.getDataFim(), "120"));
+            linha.appendChild(campoAcao(a, "oque", a.getoQue(), "170"));
+            linha.appendChild(campoAcao(a, "quem", a.getQuem(), "120"));
+            linha.appendChild(campoAcao(a, "onde", a.getOnde(), "110"));
+            linha.appendChild(campoAcao(a, "porque", a.getPorque(), "170"));
+            linha.appendChild(campoAcao(a, "como", a.getComo(), "150"));
+
+            Div quando = new Div();
+            quando.setSclass("nsp-cell");
+            quando.setStyle("flex:0 0 120px;display:flex;gap:4px");
+            Textbox inicio = textbox(a.getDataInicio(), "dd/mm/aaaa");
+            Textbox fim = textbox(a.getDataFim(), "dd/mm/aaaa");
+            inicio.addEventListener("onChange", e -> atualizarDatas(a, inicio, fim));
+            fim.addEventListener("onChange", e -> atualizarDatas(a, inicio, fim));
+            quando.appendChild(inicio);
+            quando.appendChild(fim);
+            linha.appendChild(quando);
 
             Div statusCel = new Div();
             statusCel.setSclass("nsp-cell");
@@ -207,6 +219,50 @@ public class PlanoComposer extends AdminComposer {
         c.setStyle("flex:0 0 " + larguraPx + "px");
         c.appendChild(new Label(texto == null ? "" : texto));
         return c;
+    }
+
+    private Div campoAcao(AcaoPlano acao, String campo, String valor, String larguraPx) {
+        Div celula = new Div();
+        celula.setSclass("nsp-cell");
+        celula.setStyle("flex:0 0 " + larguraPx + "px");
+        Textbox input = textbox(valor, null);
+        input.addEventListener("onChange", e -> {
+            String novo = input.getValue() == null ? "" : input.getValue().trim();
+            if ("oque".equals(campo)) acao.setoQue(novo);
+            if ("quem".equals(campo)) acao.setQuem(novo);
+            if ("onde".equals(campo)) acao.setOnde(novo);
+            if ("porque".equals(campo)) acao.setPorque(novo);
+            if ("como".equals(campo)) acao.setComo(novo);
+            planoAcaoService.atualizarCampos(acao);
+        });
+        celula.appendChild(input);
+        return celula;
+    }
+
+    private Textbox textbox(String valor, String placeholder) {
+        Textbox input = new Textbox();
+        input.setValue(valor == null ? "" : valor);
+        input.setWidth("100%");
+        if (placeholder != null) input.setPlaceholder(placeholder);
+        return input;
+    }
+
+    private void atualizarDatas(AcaoPlano acao, Textbox inicio, Textbox fim) {
+        String dataInicio = inicio.getValue() == null ? "" : inicio.getValue().trim();
+        String dataFim = fim.getValue() == null ? "" : fim.getValue().trim();
+        if ("—".equals(dataInicio)) dataInicio = "";
+        if ("—".equals(dataFim)) dataFim = "";
+        try {
+            if (!dataInicio.isEmpty()) ValidacaoNotificacao.validarData(dataInicio, "Data inicial");
+            if (!dataFim.isEmpty()) ValidacaoNotificacao.validarData(dataFim, "Data final");
+            ValidacaoNotificacao.validarIntervaloDatas(dataInicio, dataFim);
+        } catch (IllegalArgumentException e) {
+            Clients.showNotification(e.getMessage(), "error", null, "top_center", 3000);
+            return;
+        }
+        acao.setDataInicio(dataInicio);
+        acao.setDataFim(dataFim);
+        planoAcaoService.atualizarCampos(acao);
     }
 
     private Label botao(String texto, String bg, String fg, String borda) {

@@ -28,6 +28,22 @@ public class UsuarioDAO {
         }
     }
 
+    public Optional<Usuario> buscarPorId(long id) {
+        String sql = "SELECT ID, LOGIN, NOME, SENHA_HASH, SALT, PERFIL, ATIVO FROM USUARIO WHERE ID = ?";
+        try (Connection con = DataSourceFactory.obterConexao();
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setLong(1, id);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (!rs.next()) {
+                    return Optional.empty();
+                }
+                return Optional.of(mapear(rs));
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao buscar usuario por id", e);
+        }
+    }
+
     private Usuario mapear(ResultSet rs) throws SQLException {
         Usuario u = new Usuario();
         u.setId(rs.getLong("ID"));

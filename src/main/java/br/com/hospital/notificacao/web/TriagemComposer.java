@@ -1,6 +1,7 @@
 package br.com.hospital.notificacao.web;
 
 import br.com.hospital.notificacao.dao.NotificacaoDAO;
+import br.com.hospital.notificacao.model.Anexo;
 import br.com.hospital.notificacao.model.Notificacao;
 import br.com.hospital.notificacao.model.NivelRisco;
 import br.com.hospital.notificacao.model.StatusNotificacao;
@@ -38,6 +39,7 @@ public class TriagemComposer extends AdminComposer {
 
     @Override
     protected void renderConteudo(Div conteudo) {
+        adicionarVoltar(conteudo, "/admin/notificacoes.zul", "← Voltar para notificações");
         notificacao = carregarNotificacao();
         if (notificacao == null) {
             Label vazio = new Label("Nenhuma notificação aguardando triagem no momento.");
@@ -98,6 +100,13 @@ public class TriagemComposer extends AdminComposer {
         detalhes.addEventListener("onClick", e ->
                 Executions.getCurrent().sendRedirect("/admin/detalhe.zul?id=" + idNotificacao));
         card.appendChild(detalhes);
+        for (Anexo anexo : notificacao.getAnexos()) {
+            org.zkoss.zul.A link = new org.zkoss.zul.A(anexo.getNomeOriginal());
+            link.setHref("/anexo/" + anexo.getId());
+            link.setTarget("_blank");
+            link.setStyle("display:block;font-size:11.5px;color:#2b6cb0;margin-top:3px");
+            card.appendChild(link);
+        }
 
         Div secReclass = new Div();
         secReclass.setSclass("nsp-sec-title");
