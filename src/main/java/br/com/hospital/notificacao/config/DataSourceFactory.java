@@ -37,12 +37,24 @@ public final class DataSourceFactory {
         if (senha == null) {
             throw new IllegalStateException("Variável de ambiente DB2_PASSWORD não definida");
         }
+        inicializar("jdbc:db2://" + host + ":" + porta + "/" + database, usuario, senha);
+    }
 
+    /**
+     * Inicializa o pool com uma URL JDBC explicita. Usado pelos testes de integracao
+     * (banco em memoria ou um DB2 de teste); a aplicacao usa {@link #inicializar()}.
+     */
+    public static synchronized void inicializar(String jdbcUrl, String usuario, String senha) {
+        if (dataSource != null) {
+            return;
+        }
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:db2://" + host + ":" + porta + "/" + database);
+        config.setJdbcUrl(jdbcUrl);
         config.setUsername(usuario);
         config.setPassword(senha);
-        config.setDriverClassName("com.ibm.db2.jcc.DB2Driver");
+        if (jdbcUrl.startsWith("jdbc:db2:")) {
+            config.setDriverClassName("com.ibm.db2.jcc.DB2Driver");
+        }
         config.setMinimumIdle(2);
         config.setMaximumPoolSize(10);
         config.setConnectionTimeout(15_000);

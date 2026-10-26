@@ -135,6 +135,25 @@ body{background:var(--bg);color:var(--ink);font-family:'Inter',-apple-system,Bli
 .nsp-tcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:14px;border-left:5px solid #ccc}
 .nsp-whys .lbl{flex:0 0 168px;font-size:12px;font-weight:700;color:#3a352f}
 
+/* Botões de ação das telas admin (Label clicável, mesmo visual do botao() dos composers) */
+.nsp-btn{display:inline-block;background:#fff;color:#3a352f;border:1px solid var(--ring, #e3ded4);border-radius:10px;
+  padding:9px 15px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap}
+.nsp-btn-dark{background:#2b2723;color:#fff;border-color:#2b2723}
+
+/* Filtros avançados da lista de notificações */
+.nsp-filtros{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:12px;background:#fff;
+  border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.nsp-filtros .nsp-field-label{font-size:11.5px;margin-bottom:4px}
+
+/* Descrição original do notificante (somente leitura) e telas de detalhe */
+.nsp-desc-original{display:block;background:#faf8f4;border:1px solid var(--line);border-radius:10px;padding:10px 12px;
+  font-size:13px;color:#3a352f;line-height:1.5;white-space:pre-wrap;min-height:60px}
+.nsp-det-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:0 18px}
+.nsp-kv{display:flex;gap:12px;padding:7px 0;border-bottom:1px solid var(--line);font-size:13px}
+.nsp-kv:last-child{border-bottom:none}
+.nsp-kv .k{flex:0 0 170px;color:var(--muted);font-size:12px;font-weight:600}
+.nsp-kv .v{flex:1;min-width:0;color:#2f2b26;word-break:break-word}
+
 /* Overrides do tema padrao do ZK para reproduzir os campos do protótipo */
 .nsp-phone .z-textbox,.nsp-phone .z-combobox-input,.nsp-phone .z-textarea,
 .nsp-panel .z-textbox,.nsp-panel .z-combobox-input,.nsp-panel .z-textarea,

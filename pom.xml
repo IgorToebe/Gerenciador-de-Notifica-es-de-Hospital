@@ -69,10 +69,32 @@
       <version>3.5.3</version>
     </dependency>
 
+    <!-- Exportação em PDF do que foi preenchido nas notificações (HTML -> PDF, sem Word/Office) -->
+    <dependency>
+      <groupId>com.openhtmltopdf</groupId>
+      <artifactId>openhtmltopdf-pdfbox</artifactId>
+      <version>1.0.10</version>
+    </dependency>
+
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>
       <version>${junit.version}</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Testes de integração: banco em memória em modo de compatibilidade DB2 (sem Docker).
+         Para rodar a mesma suíte contra o DB2 real, ver README ("Testes"). -->
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <version>2.2.224</version>
+      <scope>test</scope>
+    </dependency>
+    <!-- Mocks de HttpServletRequest/Response nos testes dos servlets de exportação/anexo -->
+    <dependency>
+      <groupId>org.mockito</groupId>
+      <artifactId>mockito-core</artifactId>
+      <version>4.11.0</version>
       <scope>test</scope>
     </dependency>
   </dependencies>
@@ -92,6 +114,14 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <version>3.2.5</version>
+        <configuration>
+          <!-- Testes de integração (*IT) usam H2 em memória e são rápidos o bastante para
+               rodar junto com os unitários em todo "mvnw test". -->
+          <includes>
+            <include>**/*Test.java</include>
+            <include>**/*IT.java</include>
+          </includes>
+        </configuration>
       </plugin>
     </plugins>
   </build>

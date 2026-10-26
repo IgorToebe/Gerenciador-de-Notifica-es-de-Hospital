@@ -1,5 +1,7 @@
 package br.com.hospital.notificacao.config;
 
+import br.com.hospital.notificacao.model.TipoNotificacao;
+
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -11,7 +13,8 @@ import java.util.logging.Logger;
 /**
  * Cria o schema completo (8 tabelas) de forma idempotente no startup do container,
  * seguindo o mesmo padrão do antigo NotificacaoDAO.criarTabelaSeNaoExiste(): sem
- * Flyway/Liquibase, apenas DDL Java ignorando SQLSTATE 42710 (objeto já existe).
+ * Flyway/Liquibase, apenas DDL Java ignorando SQLSTATE 42710 (objeto já existe) e
+ * 42711 (coluna já existe — evoluções de schema via ALTER TABLE ADD COLUMN).
  *
  * O DDL aqui é a fonte de verdade; schema.sql na raiz do repositório é apenas
  * o espelho documental.
@@ -20,6 +23,7 @@ public final class SchemaInitializer {
 
     private static final Logger LOG = Logger.getLogger(SchemaInitializer.class.getName());
     private static final String SQLSTATE_OBJETO_JA_EXISTE = "42710";
+    private static final String SQLSTATE_COLUNA_JA_EXISTE = "42711";
 
     private SchemaInitializer() { }
 
@@ -140,8 +144,38 @@ public final class SchemaInitializer {
                     "STATUS VARCHAR(20) NOT NULL DEFAULT 'INICIAR', " +
                     "EVIDENCIA VARCHAR(300), " +
                     "ORDEM SMALLINT NOT NULL DEFAULT 0, " +
-                    "CONSTRAINT FK_PLANO_NOTIFICACAO FOREIGN KEY (ID_NOTIFICACAO) REFERENCES NOTIFICACAO(ID))"
+                    "CONSTRAINT FK_PLANO_NOTIFICACAO FOREIGN KEY (ID_NOTIFICACAO) REFERENCES NOTIFICACAO(ID))",
+
+            // V1.1: subgrupo (o "problema" dentro do tipo) e descricao revisada pelo NSP.
+            // A DESCRICAO original do notificante nunca e' sobrescrita.
+            "ALTER TABLE NOTIFICACAO ADD COLUMN SUBGRUPO VARCHAR(120)",
+            "ALTER TABLE NOTIFICACAO ADD COLUMN DESCRICAO_REVISADA VARCHAR(4000)",
+            "CREATE INDEX IX_NOTIF_SUBGRUPO ON NOTIFICACAO(SUBGRUPO)",
+            "CREATE INDEX IX_NOTIF_GRAVIDADE ON NOTIFICACAO(GRAVIDADE)",
+            "CREATE INDEX IX_NOTIF_NIVEL ON NOTIFICACAO(NIVEL_RISCO)"
     );
+
+    /**
+     * Migracoes de dados, executadas apos o DDL em todo startup: cada uma precisa ser
+     * idempotente por construcao (nao ha controle de versao de migracoes).
+     */
+    private static final List<String> MIGRACOES = Arrays.asList(
+            // Migra notificacoes da V1: os selects tipoEvento/tipoIncidente/tipoManifestacao
+            // viraram o subgrupo. So' toca linhas ainda sem subgrupo, entao pode rodar sempre.
+            "UPDATE NOTIFICACAO N SET SUBGRUPO = (SELECT MAX(C.VALOR) FROM NOTIFICACAO_CAMPO C " +
+                    "WHERE C.ID_NOTIFICACAO = N.ID AND C.CHAVE IN (" + chavesLegadas() + ")) " +
+                    "WHERE N.SUBGRUPO IS NULL AND EXISTS (SELECT 1 FROM NOTIFICACAO_CAMPO C " +
+                    "WHERE C.ID_NOTIFICACAO = N.ID AND C.CHAVE IN (" + chavesLegadas() + "))"
+    );
+
+    private static String chavesLegadas() {
+        StringBuilder sb = new StringBuilder();
+        for (String chave : TipoNotificacao.CHAVES_SUBGRUPO_LEGADAS) {
+            if (sb.length() > 0) sb.append(',');
+            sb.append("'").append(chave).append("'");
+        }
+        return sb.toString();
+    }
 
     public static void executar() {
         try (Connection con = DataSourceFactory.obterConexao()) {
@@ -149,7 +183,8 @@ public final class SchemaInitializer {
                 try (Statement st = con.createStatement()) {
                     st.execute(ddl);
                 } catch (SQLException e) {
-                    if (!SQLSTATE_OBJETO_JA_EXISTE.equals(e.getSQLState())) {
+                    if (!SQLSTATE_OBJETO_JA_EXISTE.equals(e.getSQLState())
+                            && !SQLSTATE_COLUNA_JA_EXISTE.equals(e.getSQLState())) {
                         throw new RuntimeException("Erro ao executar DDL: " + ddl, e);
                     }
                     LOG.log(Level.FINE, "Objeto ja existente, ignorando: {0}", ddl);
@@ -157,6 +192,19 @@ public final class SchemaInitializer {
             }
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao conectar para inicializar o schema", e);
+        }
+        migrarDados();
+    }
+
+    /** Executa as {@link #MIGRACOES} de dados (tambem chamado diretamente pelos testes). */
+    public static void migrarDados() {
+        try (Connection con = DataSourceFactory.obterConexao();
+             Statement st = con.createStatement()) {
+            for (String sql : MIGRACOES) {
+                st.executeUpdate(sql);
+            }
+        } catch (SQLException e) {
+            throw new RuntimeException("Erro ao executar migração de dados", e);
         }
     }
 }

@@ -1,10 +1,12 @@
 package br.com.hospital.notificacao.dao;
 
 import br.com.hospital.notificacao.config.DataSourceFactory;
+import br.com.hospital.notificacao.model.ClassificacaoIncidente;
 import br.com.hospital.notificacao.model.NivelRisco;
 import br.com.hospital.notificacao.model.Notificacao;
 import br.com.hospital.notificacao.model.StatusNotificacao;
 import br.com.hospital.notificacao.model.TipoNotificacao;
+import br.com.hospital.notificacao.service.MatrizRisco;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -12,6 +14,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,14 +25,14 @@ public class NotificacaoDAO {
 
     private static final String COLUNAS =
             "ID, PROTOCOLO, TIPO, SENHA_HASH, SENHA_SALT, DATA_INCIDENTE, HORA_INCIDENTE, SETOR, " +
-            "PRONTUARIO, GRAVIDADE, GEROU_DANO, DESCRICAO, ANONIMO, CONTATO_EMAIL, CONTATO_TELEFONE, " +
-            "STATUS, PROBABILIDADE, IMPACTO, SCORE_RISCO, NIVEL_RISCO, CRIADO_EM, ATUALIZADO_EM";
+            "PRONTUARIO, SUBGRUPO, GRAVIDADE, GEROU_DANO, DESCRICAO, DESCRICAO_REVISADA, ANONIMO, CONTATO_EMAIL, " +
+            "CONTATO_TELEFONE, STATUS, PROBABILIDADE, IMPACTO, SCORE_RISCO, NIVEL_RISCO, CRIADO_EM, ATUALIZADO_EM";
 
     /** Insere a notificacao (cabecalho) dentro de uma transacao controlada pelo chamador. */
     public long inserir(Connection con, Notificacao n) throws SQLException {
         String sql = "INSERT INTO NOTIFICACAO (PROTOCOLO, TIPO, SENHA_HASH, SENHA_SALT, DATA_INCIDENTE, " +
                 "HORA_INCIDENTE, SETOR, PRONTUARIO, GRAVIDADE, GEROU_DANO, DESCRICAO, ANONIMO, " +
-                "CONTATO_EMAIL, CONTATO_TELEFONE, STATUS) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
+                "CONTATO_EMAIL, CONTATO_TELEFONE, STATUS, SUBGRUPO) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)";
         try (PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             ps.setString(1, n.getProtocolo());
             ps.setString(2, n.getTipo().name());
@@ -46,6 +49,7 @@ public class NotificacaoDAO {
             ps.setString(13, n.getContatoEmail());
             ps.setString(14, n.getContatoTelefone());
             ps.setString(15, n.getStatus().name());
+            ps.setString(16, n.getSubgrupo());
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 keys.next();
@@ -83,9 +87,10 @@ public class NotificacaoDAO {
     }
 
     public long proximoSequencial() {
-        // Usado para compor o protocolo (#PREFIXO-ANO-000123): maior ID atual + 1,
-        // suficiente para gerar um numero legivel sem uma sequence dedicada.
-        String sql = "SELECT COALESCE(MAX(ID), 4820) + 1 FROM NOTIFICACAO";
+        // Usado para compor o protocolo (#PREFIXO-ANO-004821): maior ID atual + 4821, sem uma
+        // sequence dedicada. O deslocamento vale para TODAS as notificacoes (antes so' a
+        // primeira recebia 4821 e as seguintes voltavam para 000002, 000003... ate colidir).
+        String sql = "SELECT COALESCE(MAX(ID), 0) + 4821 FROM NOTIFICACAO";
         try (Connection con = DataSourceFactory.obterConexao();
              Statement st = con.createStatement();
              ResultSet rs = st.executeQuery(sql)) {
@@ -96,11 +101,49 @@ public class NotificacaoDAO {
         }
     }
 
-    /** Filtros de listagem do painel de notificacoes. */
+    /** Ordenacoes permitidas na lista (whitelist: o texto SQL nunca vem do usuario). */
+    public enum Ordenacao {
+        RECENTES("Mais recentes", "ID DESC"),
+        MAIOR_RISCO("Maior risco", "COALESCE(SCORE_RISCO, -1) DESC, ID DESC"),
+        PROBLEMA("Problema (A-Z)", "SUBGRUPO, ID DESC"),
+        CLASSIFICACAO("Classificação (mais grave)", ordemPorClassificacao() + " DESC, ID DESC");
+
+        private final String rotulo;
+        private final String sql;
+
+        Ordenacao(String rotulo, String sql) {
+            this.rotulo = rotulo;
+            this.sql = sql;
+        }
+
+        public String getRotulo() { return rotulo; }
+        public String getSql() { return sql; }
+
+        /** CASE que transforma a classificacao no seu grau (Circunstancia de risco=1 ... Obito=7). */
+        private static String ordemPorClassificacao() {
+            StringBuilder sb = new StringBuilder("CASE GRAVIDADE");
+            List<String> todas = ClassificacaoIncidente.TODAS;
+            for (int i = 0; i < todas.size(); i++) {
+                sb.append(" WHEN '").append(todas.get(i).replace("'", "''")).append("' THEN ").append(i + 1);
+            }
+            return sb.append(" ELSE 0 END").toString();
+        }
+    }
+
+    /** Filtros de listagem do painel de notificacoes (e da exportacao em PDF). */
     public static class Filtro {
         public StatusNotificacao status;
         public boolean apenasDuplicatas;
         public String texto;
+        public TipoNotificacao tipo;
+        public String subgrupo;
+        public String gravidade;
+        public NivelRisco nivelRisco;
+        public String prontuario;
+        public String setor;
+        public LocalDate dataDe;
+        public LocalDate dataAte;
+        public Ordenacao ordenacao = Ordenacao.RECENTES;
         public int pagina = 1;
         public int tamanhoPagina = 10;
     }
@@ -115,9 +158,12 @@ public class NotificacaoDAO {
         }
     }
 
-    public ResultadoPagina listar(Filtro filtro) {
+    /**
+     * Monta o WHERE da listagem e preenche os parametros na mesma ordem dos "?".
+     * Separado de {@link #listar(Filtro)} para ser testavel sem DB2.
+     */
+    static String montarWhere(Filtro filtro, List<Object> params) {
         StringBuilder where = new StringBuilder(" WHERE 1=1 ");
-        List<Object> params = new ArrayList<>();
 
         if (filtro.status != null) {
             where.append(" AND STATUS = ? ");
@@ -127,12 +173,55 @@ public class NotificacaoDAO {
             where.append(" AND PRONTUARIO IN (SELECT PRONTUARIO FROM NOTIFICACAO ")
                  .append(" WHERE PRONTUARIO IS NOT NULL AND PRONTUARIO <> '' GROUP BY PRONTUARIO HAVING COUNT(*) > 1) ");
         }
-        if (filtro.texto != null && !filtro.texto.trim().isEmpty()) {
+        if (filtro.tipo != null) {
+            where.append(" AND TIPO = ? ");
+            params.add(filtro.tipo.name());
+        }
+        if (naoVazio(filtro.subgrupo)) {
+            where.append(" AND SUBGRUPO = ? ");
+            params.add(filtro.subgrupo);
+        }
+        if (naoVazio(filtro.gravidade)) {
+            where.append(" AND GRAVIDADE = ? ");
+            params.add(filtro.gravidade);
+        }
+        if (filtro.nivelRisco != null) {
+            where.append(" AND NIVEL_RISCO = ? ");
+            params.add(filtro.nivelRisco.name());
+        }
+        if (naoVazio(filtro.prontuario)) {
+            where.append(" AND UPPER(PRONTUARIO) LIKE ? ");
+            params.add("%" + filtro.prontuario.trim().toUpperCase() + "%");
+        }
+        if (naoVazio(filtro.setor)) {
+            where.append(" AND SETOR = ? ");
+            params.add(filtro.setor);
+        }
+        if (filtro.dataDe != null) {
+            where.append(" AND CRIADO_EM >= ? ");
+            params.add(Timestamp.valueOf(filtro.dataDe.atStartOfDay()));
+        }
+        if (filtro.dataAte != null) {
+            where.append(" AND CRIADO_EM < ? ");
+            params.add(Timestamp.valueOf(filtro.dataAte.plusDays(1).atStartOfDay()));
+        }
+        if (naoVazio(filtro.texto)) {
             String like = "%" + filtro.texto.trim().toUpperCase() + "%";
             where.append(" AND (UPPER(PRONTUARIO) LIKE ? OR UPPER(GRAVIDADE) LIKE ? OR UPPER(DESCRICAO) LIKE ? " +
-                    "OR UPPER(PROTOCOLO) LIKE ? OR UPPER(TIPO) LIKE ?) ");
-            for (int i = 0; i < 5; i++) params.add(like);
+                    "OR UPPER(PROTOCOLO) LIKE ? OR UPPER(TIPO) LIKE ? OR UPPER(SUBGRUPO) LIKE ? " +
+                    "OR UPPER(DESCRICAO_REVISADA) LIKE ?) ");
+            for (int i = 0; i < 7; i++) params.add(like);
         }
+        return where.toString();
+    }
+
+    private static boolean naoVazio(String s) {
+        return s != null && !s.trim().isEmpty();
+    }
+
+    public ResultadoPagina listar(Filtro filtro) {
+        List<Object> params = new ArrayList<>();
+        String where = montarWhere(filtro, params);
 
         try (Connection con = DataSourceFactory.obterConexao()) {
             int total;
@@ -148,7 +237,8 @@ public class NotificacaoDAO {
             int tamanho = Math.max(1, filtro.tamanhoPagina);
             int offset = (pagina - 1) * tamanho;
             String sql = "SELECT " + COLUNAS + " FROM NOTIFICACAO" + where +
-                    " ORDER BY ID DESC OFFSET " + offset + " ROWS FETCH FIRST " + tamanho + " ROWS ONLY";
+                    " ORDER BY " + (filtro.ordenacao != null ? filtro.ordenacao : Ordenacao.RECENTES).getSql() +
+                    " OFFSET " + offset + " ROWS FETCH FIRST " + tamanho + " ROWS ONLY";
             List<Notificacao> itens = new ArrayList<>();
             try (PreparedStatement ps = con.prepareStatement(sql)) {
                 bind(ps, params);
@@ -214,27 +304,28 @@ public class NotificacaoDAO {
     }
 
     public int contarCriadasHoje() {
-        String sql = "SELECT COUNT(*) FROM NOTIFICACAO WHERE DATE(CRIADO_EM) = CURRENT DATE";
+        // Intervalo [hoje 00:00, amanha 00:00) em vez de DATE(CRIADO_EM): usa o indice
+        // IX_NOTIF_CRIADO e e' o mesmo criterio do filtro de periodo da lista.
+        String sql = "SELECT COUNT(*) FROM NOTIFICACAO WHERE CRIADO_EM >= ? AND CRIADO_EM < ?";
+        LocalDate hoje = LocalDate.now();
         try (Connection con = DataSourceFactory.obterConexao();
-             Statement st = con.createStatement();
-             ResultSet rs = st.executeQuery(sql)) {
-            rs.next();
-            return rs.getInt(1);
+             PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setTimestamp(1, Timestamp.valueOf(hoje.atStartOfDay()));
+            ps.setTimestamp(2, Timestamp.valueOf(hoje.plusDays(1).atStartOfDay()));
+            try (ResultSet rs = ps.executeQuery()) {
+                rs.next();
+                return rs.getInt(1);
+            }
         } catch (SQLException e) {
             throw new RuntimeException("Erro ao contar notificacoes de hoje", e);
         }
     }
 
-    /** Aplica reclassificacao de risco/gravidade e muda o status, dentro de uma transacao propria. */
-    public void atualizarRisco(long id, String gravidade, int probabilidade, int impacto,
-                                int scoreRisco, NivelRisco nivelRisco, StatusNotificacao novoStatus) {
-        try (Connection con = DataSourceFactory.obterConexao()) {
-            atualizarRisco(con, id, gravidade, probabilidade, impacto, scoreRisco, nivelRisco, novoStatus);
-        } catch (SQLException e) {
-            throw new RuntimeException("Erro ao atualizar risco da notificacao", e);
-        }
-    }
-
+    /**
+     * Aplica reclassificacao de risco/gravidade e muda o status. Recebe sempre a conexao do
+     * chamador: com uma conexao propria, uma notificacao recem-inserida (ainda nao
+     * commitada) nao seria encontrada e o risco nao seria gravado.
+     */
     public void atualizarRisco(Connection con, long id, String gravidade, int probabilidade, int impacto,
                                 int scoreRisco, NivelRisco nivelRisco, StatusNotificacao novoStatus) throws SQLException {
         String sql = "UPDATE NOTIFICACAO SET GRAVIDADE = ?, PROBABILIDADE = ?, IMPACTO = ?, SCORE_RISCO = ?, " +
@@ -247,6 +338,35 @@ public class NotificacaoDAO {
             ps.setString(5, nivelRisco.name());
             ps.setString(6, novoStatus.name());
             ps.setLong(7, id);
+            ps.executeUpdate();
+        }
+    }
+
+    /**
+     * Reclassificacao feita pelo NSP: tipo, subgrupo, classificacao, descricao revisada e,
+     * opcionalmente (probabilidade/impacto nao nulos), o risco. A DESCRICAO original nunca e' alterada.
+     */
+    public void atualizarClassificacao(Connection con, long id, TipoNotificacao tipo, String subgrupo,
+                                       String gravidade, String descricaoRevisada,
+                                       Integer probabilidade, Integer impacto) throws SQLException {
+        boolean comRisco = probabilidade != null && impacto != null;
+        String sql = "UPDATE NOTIFICACAO SET TIPO = ?, SUBGRUPO = ?, GRAVIDADE = ?, DESCRICAO_REVISADA = ?, " +
+                (comRisco ? "PROBABILIDADE = ?, IMPACTO = ?, SCORE_RISCO = ?, NIVEL_RISCO = ?, " : "") +
+                "ATUALIZADO_EM = CURRENT TIMESTAMP WHERE ID = ?";
+        try (PreparedStatement ps = con.prepareStatement(sql)) {
+            int i = 1;
+            ps.setString(i++, tipo.name());
+            ps.setString(i++, subgrupo);
+            ps.setString(i++, gravidade);
+            ps.setString(i++, descricaoRevisada);
+            if (comRisco) {
+                int score = MatrizRisco.calcularScore(probabilidade, impacto);
+                ps.setInt(i++, probabilidade);
+                ps.setInt(i++, impacto);
+                ps.setInt(i++, score);
+                ps.setString(i++, NivelRisco.doScore(score).name());
+            }
+            ps.setLong(i, id);
             ps.executeUpdate();
         }
     }
@@ -277,9 +397,11 @@ public class NotificacaoDAO {
         n.setHoraIncidente(rs.getString("HORA_INCIDENTE"));
         n.setSetor(rs.getString("SETOR"));
         n.setProntuario(rs.getString("PRONTUARIO"));
+        n.setSubgrupo(rs.getString("SUBGRUPO"));
         n.setGravidade(rs.getString("GRAVIDADE"));
         n.setGerouDano(rs.getInt("GEROU_DANO") == 1);
         n.setDescricao(rs.getString("DESCRICAO"));
+        n.setDescricaoRevisada(rs.getString("DESCRICAO_REVISADA"));
         n.setAnonimo(rs.getInt("ANONIMO") == 1);
         n.setContatoEmail(rs.getString("CONTATO_EMAIL"));
         n.setContatoTelefone(rs.getString("CONTATO_TELEFONE"));

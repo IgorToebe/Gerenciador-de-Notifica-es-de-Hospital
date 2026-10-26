@@ -26,9 +26,11 @@ CREATE TABLE NOTIFICACAO (
     HORA_INCIDENTE VARCHAR(5),
     SETOR VARCHAR(120),
     PRONTUARIO VARCHAR(40),
-    GRAVIDADE VARCHAR(60),
+    SUBGRUPO VARCHAR(120),                   -- "problema" dentro do tipo (ver TipoNotificacao.getSubgrupos)
+    GRAVIDADE VARCHAR(60),                   -- classificação do incidente (ver ClassificacaoIncidente)
     GEROU_DANO SMALLINT NOT NULL DEFAULT 0,
-    DESCRICAO VARCHAR(4000),
+    DESCRICAO VARCHAR(4000),                 -- texto original do notificante, nunca alterado
+    DESCRICAO_REVISADA VARCHAR(4000),        -- reescrita/reclassificada pelo NSP
     ANONIMO SMALLINT NOT NULL DEFAULT 1,
     CONTATO_EMAIL VARCHAR(160),
     CONTATO_TELEFONE VARCHAR(40),
@@ -45,6 +47,12 @@ CREATE INDEX IX_NOTIF_PRONTUARIO ON NOTIFICACAO(PRONTUARIO);
 CREATE INDEX IX_NOTIF_STATUS ON NOTIFICACAO(STATUS);
 CREATE INDEX IX_NOTIF_TIPO ON NOTIFICACAO(TIPO);
 CREATE INDEX IX_NOTIF_CRIADO ON NOTIFICACAO(CRIADO_EM);
+CREATE INDEX IX_NOTIF_SUBGRUPO ON NOTIFICACAO(SUBGRUPO);
+CREATE INDEX IX_NOTIF_GRAVIDADE ON NOTIFICACAO(GRAVIDADE);
+CREATE INDEX IX_NOTIF_NIVEL ON NOTIFICACAO(NIVEL_RISCO);
+-- Bancos criados antes da V1.1 recebem SUBGRUPO/DESCRICAO_REVISADA via ALTER TABLE ADD COLUMN
+-- (SchemaInitializer), e o SUBGRUPO é migrado dos campos dinâmicos tipoEvento/tipoIncidente/
+-- tipoManifestacao.
 
 -- Campos dinâmicos por tipo de notificação (produto/lote, medicamento/via, tipo de
 -- manifestação etc.), sem precisar de uma tabela por tipo.

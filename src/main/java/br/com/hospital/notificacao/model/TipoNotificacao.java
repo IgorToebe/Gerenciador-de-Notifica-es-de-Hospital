@@ -1,13 +1,15 @@
 package br.com.hospital.notificacao.model;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 /**
  * Os 5 canais de notificacao do NSP HU/UEM, um por QR Code: 4 para profissionais
  * (Tecnovigilancia, Farmacovigilancia, Near Miss Materno, Problemas Assistenciais)
  * e 1 para pacientes/acompanhantes. Cada tipo carrega sua identidade visual (cor de
- * fundo propria, conforme pedido do cliente) e os campos dinamicos do passo 2 do wizard.
+ * fundo propria, conforme pedido do cliente), os subgrupos (o "problema" dentro do tipo,
+ * usado em filtros e na reclassificacao) e os campos dinamicos do passo 2 do wizard.
  *
  * Esta enum e' o espelho em Java do objeto TYPES do protótipo funcional
  * (ProtótipoFuncionalV1_LabEngSoftware.html, linhas ~510-521).
@@ -18,15 +20,21 @@ public enum TipoNotificacao {
             "tecno", "Notificação de Tecnovigilância", "Equipamentos e materiais médicos",
             "FOR-NSP-005-2026", "TC", "t-tecno", "caduceus", true,
             "#2f80d6", "#225fa3", "#eaf2fc", "#cfe2f6", "#bcd8f4",
+            "Tipo de produto", Arrays.asList(
+                    "Equipamento médico", "Material médico-hospitalar", "Produto para diagnóstico in vitro",
+                    "Implante / prótese", "Outro"),
             Arrays.asList(
                     CampoDinamicoDef.texto("produto", "Produto / equipamento afetado", true),
-                    CampoDinamicoDef.texto("registroAnvisa", "Registro ANVISA", false),
+                    CampoDinamicoDef.texto("registroAnvisa", "Registro ANVISA", true),
                     CampoDinamicoDef.texto("lote", "Lote / nº de série", false)
             )),
     FARMACOVIGILANCIA(
             "farmaco", "Notificação de Farmacovigilância", "Medicamentos e vacinas",
             "FOR-NSP-002-2026", "FV", "t-farmaco", "pill", false,
             "#dd6f1e", "#b1571a", "#fbeee6", "#f6d0b6", "#f2c3a3",
+            "Tipo de problema", Arrays.asList(
+                    "Reação adversa", "Erro de medicação", "Inefetividade terapêutica", "Desvio de qualidade",
+                    "Evento adverso pós-vacinação (ESAVI)", "Outro"),
             Arrays.asList(
                     CampoDinamicoDef.texto("medicamento", "Medicamento / vacina", true),
                     CampoDinamicoDef.select("via", "Via de administração", false, "Oral", "EV", "IM", "SC", "Tópica"),
@@ -37,9 +45,9 @@ public enum TipoNotificacao {
             "nearmiss", "Near Miss Materno", "Segurança materna",
             "FOR-NSP-004-2026", "NM", "t-nearmiss", "venus", false,
             "#d6336c", "#a82654", "#fce9f0", "#f6cdde", "#f1bcd2",
+            "Tipo de evento materno", Arrays.asList(
+                    "Hemorragia grave", "Pré-eclâmpsia / eclâmpsia", "Sepse", "Ruptura uterina", "Outro near miss"),
             Arrays.asList(
-                    CampoDinamicoDef.select("tipoEvento", "Tipo de evento materno", true,
-                            "Hemorragia grave", "Pré-eclâmpsia / eclâmpsia", "Sepse", "Ruptura uterina", "Outro near miss"),
                     CampoDinamicoDef.texto("idadeGestacional", "Idade gestacional (semanas)", false),
                     CampoDinamicoDef.select("momento", "Momento", false, "Pré-parto", "Parto", "Pós-parto")
             )),
@@ -47,19 +55,24 @@ public enum TipoNotificacao {
             "assist", "Notificação de Problemas Assistenciais", "Segurança do paciente",
             "FOR-NSP-001-2026", "PA", "t-assist", "heart", true,
             "#4e9c3e", "#3c7a30", "#eef5e3", "#d6ecbb", "#c8e3a8",
-            Arrays.asList(
-                    CampoDinamicoDef.select("tipoIncidente", "Tipo de incidente", true,
-                            "Queda", "Lesão por pressão", "Erro de identificação", "Flebite", "Falha de comunicação", "Outro")
-            )),
+            "Tipo de incidente", Arrays.asList(
+                    "Queda", "Lesão por pressão", "Erro de identificação", "Flebite", "Falha de comunicação", "Outro"),
+            Collections.emptyList()),
     NOTIFICACAO_PACIENTE(
             "paciente", "Notificação do Paciente", "Denúncia, reclamação, sugestão ou elogio",
             "Ouvidoria · Segurança do paciente", "NP", "t-paciente", "person", true,
             "#b07a1c", "#8a5f15", "#faf1dd", "#fbe0a3", "#f3d28a",
+            "Tipo de manifestação", Arrays.asList("Denúncia", "Reclamação", "Sugestão", "Elogio"),
             Arrays.asList(
-                    CampoDinamicoDef.select("tipoManifestacao", "Tipo de manifestação", true,
-                            "Denúncia", "Reclamação", "Sugestão", "Elogio"),
                     CampoDinamicoDef.toggle("voceE", "Você é", "Paciente", "Acompanhante")
             ));
+
+    /**
+     * Chaves dos antigos campos dinamicos (V1) que viraram o subgrupo do tipo. Usadas
+     * apenas para migrar notificacoes ja gravadas (ver SchemaInitializer).
+     */
+    public static final List<String> CHAVES_SUBGRUPO_LEGADAS =
+            Arrays.asList("tipoEvento", "tipoIncidente", "tipoManifestacao");
 
     private final String chaveUrl;
     private final String titulo;
@@ -74,12 +87,14 @@ public enum TipoNotificacao {
     private final String corSuave;
     private final String corCabecalho;
     private final String corAnel;
+    private final String rotuloSubgrupo;
+    private final List<String> subgrupos;
     private final List<CampoDinamicoDef> camposDinamicos;
 
     TipoNotificacao(String chaveUrl, String titulo, String subtitulo, String codigoFormulario,
                      String prefixoProtocolo, String classeCss, String icone, boolean iconePreenchido,
                      String cor, String corEscura, String corSuave, String corCabecalho, String corAnel,
-                     List<CampoDinamicoDef> camposDinamicos) {
+                     String rotuloSubgrupo, List<String> subgrupos, List<CampoDinamicoDef> camposDinamicos) {
         this.chaveUrl = chaveUrl;
         this.titulo = titulo;
         this.subtitulo = subtitulo;
@@ -93,6 +108,8 @@ public enum TipoNotificacao {
         this.corSuave = corSuave;
         this.corCabecalho = corCabecalho;
         this.corAnel = corAnel;
+        this.rotuloSubgrupo = rotuloSubgrupo;
+        this.subgrupos = subgrupos;
         this.camposDinamicos = camposDinamicos;
     }
 
@@ -123,7 +140,14 @@ public enum TipoNotificacao {
     public String getCorSuave() { return corSuave; }
     public String getCorCabecalho() { return corCabecalho; }
     public String getCorAnel() { return corAnel; }
+    public String getRotuloSubgrupo() { return rotuloSubgrupo; }
+    public List<String> getSubgrupos() { return subgrupos; }
     public List<CampoDinamicoDef> getCamposDinamicos() { return camposDinamicos; }
+
+    /** O subgrupo (problema) informado pertence a este tipo? */
+    public boolean aceitaSubgrupo(String subgrupo) {
+        return subgrupo != null && subgrupos.contains(subgrupo);
+    }
 
     public boolean isAcessoProfissional() {
         return this != NOTIFICACAO_PACIENTE;

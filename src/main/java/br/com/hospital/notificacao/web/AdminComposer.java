@@ -1,5 +1,8 @@
 package br.com.hospital.notificacao.web;
 
+import br.com.hospital.notificacao.model.NivelRisco;
+import br.com.hospital.notificacao.model.StatusNotificacao;
+import br.com.hospital.notificacao.model.TipoNotificacao;
 import br.com.hospital.notificacao.model.Usuario;
 import org.zkoss.zk.ui.Component;
 import org.zkoss.zk.ui.Executions;
@@ -77,6 +80,52 @@ public abstract class AdminComposer extends SelectorComposer<Component> {
     }
 
     protected abstract String paginaAtiva();
+
+    /** Tela onde a notificacao deve ser trabalhada na etapa (status) atual. */
+    protected static String destinoEtapa(StatusNotificacao status) {
+        switch (status) {
+            case ABERTO:
+            case TRIAGEM:
+                return "/admin/triagem.zul";
+            case INVESTIGACAO:
+                return "/admin/investigacao.zul";
+            case PLANO:
+                return "/admin/plano.zul";
+            default:
+                return "/admin/investigacao.zul";
+        }
+    }
+
+    protected static String rotuloEtapa(StatusNotificacao status) {
+        switch (status) {
+            case ABERTO: return "Triar →";
+            case TRIAGEM: return "Classificar →";
+            case INVESTIGACAO: return "Investigar →";
+            case PLANO: return "Plano →";
+            default: return "Ver →";
+        }
+    }
+
+    protected static Label tagRisco(NivelRisco nivel) {
+        Label lbl = new Label(nivel.getRotulo());
+        lbl.setSclass("nsp-tg");
+        lbl.setStyle("background:var(--r-" + nivel.getChave() + "-bg);color:var(--r-" + nivel.getChave() + "-fg)");
+        return lbl;
+    }
+
+    protected static Label tagStatus(StatusNotificacao status) {
+        Label lbl = new Label(status.getRotulo());
+        lbl.setSclass("nsp-tg");
+        lbl.setStyle("background:var(--s-" + status.getClasseCss() + "-bg);color:var(--s-" + status.getClasseCss() + "-fg)");
+        return lbl;
+    }
+
+    protected static Label tagTipo(TipoNotificacao tipo) {
+        Label lbl = new Label(tipo.getTitulo());
+        lbl.setSclass("nsp-tg");
+        lbl.setStyle("background:" + tipo.getCorSuave() + ";color:" + tipo.getCor());
+        return lbl;
+    }
 
     protected abstract void renderConteudo(Div conteudo) throws Exception;
 }

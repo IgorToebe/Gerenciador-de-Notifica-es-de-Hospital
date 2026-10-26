@@ -4,7 +4,9 @@ import br.com.hospital.notificacao.config.DataSourceFactory;
 import br.com.hospital.notificacao.dao.AnexoDAO;
 import br.com.hospital.notificacao.dao.CampoNotificacaoDAO;
 import br.com.hospital.notificacao.dao.HistoricoDAO;
+import br.com.hospital.notificacao.dao.InvestigacaoDAO;
 import br.com.hospital.notificacao.dao.NotificacaoDAO;
+import br.com.hospital.notificacao.dao.PlanoAcaoDAO;
 import br.com.hospital.notificacao.model.CampoDinamicoDef;
 import br.com.hospital.notificacao.model.CampoNotificacao;
 import br.com.hospital.notificacao.model.Notificacao;
@@ -34,10 +36,15 @@ public class NotificacaoService {
     private final AnexoDAO anexoDAO = new AnexoDAO();
     private final HistoricoDAO historicoDAO = new HistoricoDAO();
     private final AnexoService anexoService = new AnexoService();
+    private final InvestigacaoDAO investigacaoDAO = new InvestigacaoDAO();
+    private final PlanoAcaoDAO planoAcaoDAO = new PlanoAcaoDAO();
 
     public ResultadoNotificacao criar(NovaNotificacaoRequest req) {
         if (req.getTipo() == null) {
             throw new IllegalArgumentException("Tipo de notificação é obrigatório");
+        }
+        if (!req.getTipo().aceitaSubgrupo(req.getSubgrupo())) {
+            throw new IllegalArgumentException(req.getTipo().getRotuloSubgrupo() + " inválido: " + req.getSubgrupo());
         }
 
         long sequencial = notificacaoDAO.proximoSequencial();
@@ -55,6 +62,7 @@ public class NotificacaoService {
         n.setHoraIncidente(req.getHoraIncidente());
         n.setSetor(req.getSetor());
         n.setProntuario(req.getProntuario());
+        n.setSubgrupo(req.getSubgrupo());
         n.setGravidade(req.getGravidade());
         n.setGerouDano(req.isGerouDano());
         n.setDescricao(req.getDescricao());
@@ -82,7 +90,9 @@ public class NotificacaoService {
                         "Notificação criada via QR Code (" + req.getTipo().getTitulo() + ")");
 
                 // Pre-classificacao de risco padrao (a equipe de triagem reclassifica depois).
-                notificacaoDAO.atualizarRisco(id, req.getGravidade(), PROB_PADRAO, IMPACTO_PADRAO,
+                // Na mesma conexao/transacao do INSERT: uma conexao nova nao enxerga a linha
+                // ainda nao commitada e a notificacao ficaria sem risco.
+                notificacaoDAO.atualizarRisco(con, id, req.getGravidade(), PROB_PADRAO, IMPACTO_PADRAO,
                         MatrizRisco.calcularScore(PROB_PADRAO, IMPACTO_PADRAO),
                         MatrizRisco.calcularNivel(PROB_PADRAO, IMPACTO_PADRAO), StatusNotificacao.ABERTO);
 
@@ -145,6 +155,15 @@ public class NotificacaoService {
         n.setCampos(campoDAO.listarPorNotificacao(id));
         n.setAnexos(anexoDAO.listarPorNotificacao(id));
         return n;
+    }
+
+    /** Notificacao completa + investigacao (se houver), plano de acao e historico. Somente leitura. */
+    public DetalheNotificacao carregarDetalhe(long id) {
+        Notificacao n = carregarCompleta(id);
+        return new DetalheNotificacao(n,
+                investigacaoDAO.buscarPorNotificacao(id).orElse(null),
+                planoAcaoDAO.listarPorNotificacao(id),
+                historicoDAO.listarPorNotificacao(id));
     }
 
     public NotificacaoDAO.ResultadoPagina listar(NotificacaoDAO.Filtro filtro) {

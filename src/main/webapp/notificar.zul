@@ -46,29 +46,14 @@
                     </hlayout>
 
                     <label sclass="nsp-field-label" style="margin-top:10px" value="Setor / unidade *"/>
-                    <combobox id="cboSetor" readonly="true" width="100%">
-                        <comboitem label="Pronto Socorro"/>
-                        <comboitem label="Enfermaria"/>
-                        <comboitem label="UTI Adulto"/>
-                        <comboitem label="UTI Neonatal"/>
-                        <comboitem label="Maternidade"/>
-                        <comboitem label="Centro Cirúrgico"/>
-                        <comboitem label="Farmácia"/>
-                        <comboitem label="Ambulatório"/>
-                    </combobox>
+                    <!-- Itens preenchidos pelo WizardComposer a partir de Setores.TODOS -->
+                    <combobox id="cboSetor" readonly="true" width="100%"/>
 
                     <div id="camposDinamicos" style="margin-top:6px"/>
 
                     <label sclass="nsp-field-label" style="margin-top:10px" value="Pré-classificação da gravidade *"/>
-                    <combobox id="cboGravidade" readonly="true" width="100%">
-                        <comboitem label="Circunstância de risco"/>
-                        <comboitem label="Near miss (quase erro)"/>
-                        <comboitem label="Incidente sem dano"/>
-                        <comboitem label="Dano leve"/>
-                        <comboitem label="Dano moderado"/>
-                        <comboitem label="Dano grave"/>
-                        <comboitem label="Óbito"/>
-                    </combobox>
+                    <!-- Itens preenchidos pelo WizardComposer a partir de ClassificacaoIncidente.TODAS -->
+                    <combobox id="cboGravidade" readonly="true" width="100%"/>
 
                     <label sclass="nsp-field-label" style="margin-top:10px" value="Gerou dano ao paciente?"/>
                     <hlayout id="toggleDano" sclass="nsp-btnrow">

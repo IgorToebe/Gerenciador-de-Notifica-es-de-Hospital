@@ -15,7 +15,8 @@ import org.zkoss.zul.Label;
 import org.zkoss.zul.Textbox;
 
 /**
- * Investigação e Análise de Incidente (FOR-NSP-014): timeline, fatores contribuintes
+ * Investigação e Análise de Incidente (FOR-NSP-014): classificação do incidente
+ * (problema, classificação e risco, revisáveis no início), timeline, fatores contribuintes
  * (Protocolo de Londres) e 5 Porquês. A causa raiz (5º porquê) é obrigatória para gerar
  * o plano de ação (Item 4 dos critérios de aceitação).
  */
@@ -54,11 +55,28 @@ public class InvestigacaoComposer extends AdminComposer {
         Label titulo = new Label("Investigação e Análise de Incidente");
         titulo.setStyle("display:block;font-size:17px;font-weight:800;color:#23201c");
         Label meta = new Label("FOR-NSP-014-2026 · Notif. #" + notificacao.getId() + " — " + notificacao.getTipo().getTitulo()
-                + " · Prontuário " + (isEmpty(notificacao.getProntuario()) ? "—" : notificacao.getProntuario())
+                + " · Prontuário " + ouTraco(notificacao.getProntuario())
+                + " · Problema " + ouTraco(notificacao.getSubgrupo())
+                + " · Classificação " + ouTraco(notificacao.getGravidade())
                 + " · Risco " + (notificacao.getNivelRisco() != null ? notificacao.getNivelRisco().getRotulo() : "—"));
-        meta.setStyle("display:block;font-size:12.5px;color:var(--muted);margin-bottom:14px");
+        meta.setStyle("display:block;font-size:12.5px;color:var(--muted);margin-bottom:4px");
+        final long idNotificacao = notificacao.getId();
+        Label verDetalhes = new Label("Ver detalhes da notificação →");
+        verDetalhes.setSclass("nsp-linkbtn");
+        verDetalhes.addEventListener("onClick", e ->
+                Executions.getCurrent().sendRedirect("/admin/detalhe.zul?id=" + idNotificacao));
         painel.appendChild(titulo);
         painel.appendChild(meta);
+        painel.appendChild(verDetalhes);
+
+        // Problema, classificacao e risco revisados ja' no inicio da investigacao.
+        painel.appendChild(secTitulo("0", "Classificação do incidente"));
+        painel.appendChild(new ReclassificacaoPainel(notificacao, true, () -> {
+            // A pagina e' recarregada: salva o rascunho antes para nao perder o que ja foi digitado.
+            preencherInvestigacaoComFormulario();
+            investigacaoService.salvarRascunho(investigacao);
+            Executions.getCurrent().sendRedirect("/admin/investigacao.zul?id=" + idNotificacao);
+        }));
 
         Div cabecalho = new Div();
         cabecalho.setStyle("display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:8px");
@@ -287,5 +305,9 @@ public class InvestigacaoComposer extends AdminComposer {
 
     private boolean isEmpty(String s) {
         return s == null || s.trim().isEmpty();
+    }
+
+    private String ouTraco(String s) {
+        return isEmpty(s) ? "—" : s;
     }
 }

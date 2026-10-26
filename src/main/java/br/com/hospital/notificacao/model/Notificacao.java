@@ -16,9 +16,11 @@ public class Notificacao {
     private String horaIncidente;
     private String setor;
     private String prontuario;
+    private String subgrupo;
     private String gravidade;
     private boolean gerouDano;
     private String descricao;
+    private String descricaoRevisada;
 
     private boolean anonimo;
     private String contatoEmail;
@@ -54,12 +56,21 @@ public class Notificacao {
     public void setSetor(String setor) { this.setor = setor; }
     public String getProntuario() { return prontuario; }
     public void setProntuario(String prontuario) { this.prontuario = prontuario; }
+    public String getSubgrupo() { return subgrupo; }
+    public void setSubgrupo(String subgrupo) { this.subgrupo = subgrupo; }
     public String getGravidade() { return gravidade; }
     public void setGravidade(String gravidade) { this.gravidade = gravidade; }
     public boolean isGerouDano() { return gerouDano; }
     public void setGerouDano(boolean gerouDano) { this.gerouDano = gerouDano; }
     public String getDescricao() { return descricao; }
     public void setDescricao(String descricao) { this.descricao = descricao; }
+    public String getDescricaoRevisada() { return descricaoRevisada; }
+    public void setDescricaoRevisada(String descricaoRevisada) { this.descricaoRevisada = descricaoRevisada; }
+
+    /** Descricao revisada pelo NSP quando existir; senao, a original do notificante. */
+    public String getDescricaoVigente() {
+        return descricaoRevisada != null && !descricaoRevisada.trim().isEmpty() ? descricaoRevisada : descricao;
+    }
     public boolean isAnonimo() { return anonimo; }
     public void setAnonimo(boolean anonimo) { this.anonimo = anonimo; }
     public String getContatoEmail() { return contatoEmail; }

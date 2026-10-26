@@ -14,6 +14,7 @@ public class NovaNotificacaoRequest {
     private String horaIncidente;
     private String setor;
     private String prontuario;
+    private String subgrupo;
     private String gravidade;
     private boolean gerouDano;
     private String descricao;
@@ -32,6 +33,8 @@ public class NovaNotificacaoRequest {
     public void setSetor(String setor) { this.setor = setor; }
     public String getProntuario() { return prontuario; }
     public void setProntuario(String prontuario) { this.prontuario = prontuario; }
+    public String getSubgrupo() { return subgrupo; }
+    public void setSubgrupo(String subgrupo) { this.subgrupo = subgrupo; }
     public String getGravidade() { return gravidade; }
     public void setGravidade(String gravidade) { this.gravidade = gravidade; }
     public boolean isGerouDano() { return gerouDano; }

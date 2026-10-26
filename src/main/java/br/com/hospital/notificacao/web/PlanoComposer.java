@@ -71,9 +71,9 @@ public class PlanoComposer extends AdminComposer {
         });
         rodape.appendChild(addAcao);
 
-        Label exportar = botao("Exportar (.xlsx)", "#fff", "#3a352f", "1px solid var(--ring)");
-        exportar.addEventListener("onClick", e ->
-                Clients.showNotification("Exportação de indicadores fica para a V2 (ver ROADMAP-V2.md)", "info", null, "top_center", 3000));
+        Label exportar = botao("Exportar PDF", "#fff", "#3a352f", "1px solid var(--ring)");
+        exportar.addEventListener("onClick", e -> Executions.getCurrent()
+                .sendRedirect("/export/notificacao/" + notificacao.getId() + ".pdf", "_blank"));
         rodape.appendChild(exportar);
 
         boolean podeConcluir = planoAcaoService.podeConcluir(notificacao.getId());

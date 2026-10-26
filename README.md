@@ -59,10 +59,47 @@ web/      Composers ZK (um por tela) + servlets auxiliares (QR Code, download de
 Aberto → Em triagem → Em investigação → Plano em execução → Concluído
 ```
 
-1. **Abertura** ([WizardComposer](src/main/java/br/com/hospital/notificacao/web/WizardComposer.java)): wizard de 4 passos (sigilo/LGPD → dados do incidente → descrição/anexos → contato opcional). Gera protocolo (`#TC-2026-004821`) e senha de acompanhamento, exibidos uma única vez.
-2. **Triagem** ([TriagemComposer](src/main/java/br/com/hospital/notificacao/web/TriagemComposer.java)): pré-visualização dos detalhes, matriz de risco Probabilidade × Impacto (5×5), reclassificação de gravidade, detecção de duplicatas por prontuário.
-3. **Investigação** ([InvestigacaoComposer](src/main/java/br/com/hospital/notificacao/web/InvestigacaoComposer.java)): FOR-NSP-014 — timeline do incidente, 6 fatores contribuintes (Protocolo de Londres), 5 Porquês. A causa raiz (5º porquê) é **obrigatória** para gerar o plano de ação.
+1. **Abertura** ([WizardComposer](src/main/java/br/com/hospital/notificacao/web/WizardComposer.java)): wizard de 4 passos (sigilo/LGPD → dados do incidente → descrição/anexos → contato opcional). No passo 2 o notificante escolhe o **problema (subgrupo)** do tipo, obrigatório. Na Tecnovigilância o **Registro ANVISA é obrigatório**. Gera protocolo (`#TC-2026-004821`) e senha de acompanhamento, exibidos uma única vez.
+2. **Triagem** ([TriagemComposer](src/main/java/br/com/hospital/notificacao/web/TriagemComposer.java)): resumo com link para os detalhes completos, painel de reclassificação, matriz de risco Probabilidade × Impacto (5×5) e detecção de duplicatas por prontuário. "Iniciar investigação" exige problema, classificação e risco definidos.
+3. **Investigação** ([InvestigacaoComposer](src/main/java/br/com/hospital/notificacao/web/InvestigacaoComposer.java)): FOR-NSP-014. Começa pela seção **0 · Classificação do incidente** (problema, classificação e risco, editáveis), seguida da timeline do incidente, dos 6 fatores contribuintes (Protocolo de Londres) e dos 5 Porquês. A causa raiz (5º porquê) é **obrigatória** para gerar o plano de ação.
 4. **Plano de ação** ([PlanoComposer](src/main/java/br/com/hospital/notificacao/web/PlanoComposer.java)): 5W2H editável (SGQ-001). A notificação só pode ser concluída quando todas as ações estiverem Concluídas ou Canceladas.
+
+### Problema, classificação e risco
+
+Toda notificação é descrita em três eixos, que aparecem como colunas na lista, servem de filtro e entram no PDF:
+
+| Eixo | Campo | Valores |
+|---|---|---|
+| **Problema** | `SUBGRUPO` | Lista própria de cada tipo, definida em [TipoNotificacao](src/main/java/br/com/hospital/notificacao/model/TipoNotificacao.java) (`getSubgrupos()`). Ex.: Tecnovigilância → Equipamento médico, Material médico-hospitalar…; Farmacovigilância → Reação adversa, Erro de medicação… |
+| **Classificação do incidente** | `GRAVIDADE` | Circunstância de risco … Óbito ([ClassificacaoIncidente](src/main/java/br/com/hospital/notificacao/model/ClassificacaoIncidente.java), fonte única para o wizard, a triagem e os filtros) |
+| **Risco** | `NIVEL_RISCO` / `SCORE_RISCO` | Matriz Probabilidade × Impacto ([MatrizRisco](src/main/java/br/com/hospital/notificacao/service/MatrizRisco.java)) |
+
+Para mudar as listas de subgrupos, basta editar os construtores do enum `TipoNotificacao`.
+
+### Reclassificação
+
+O [ReclassificacaoPainel](src/main/java/br/com/hospital/notificacao/web/ReclassificacaoPainel.java) é um painel único, reaproveitado na Triagem, na Investigação e na tela de Detalhes. Nele o NSP pode alterar:
+
+- o **tipo/canal**, para corrigir uma notificação aberta pelo QR Code errado (o protocolo original é mantido);
+- o problema, a classificação e o risco;
+- a **descrição revisada**. A descrição original do notificante (`DESCRICAO`) nunca é sobrescrita: a revisão fica em `DESCRICAO_REVISADA`, e as duas aparecem lado a lado.
+
+Cada reclassificação grava em `NOTIFICACAO_HISTORICO` o que mudou (ex.: "Tipo Tecnovigilância → Farmacovigilância; Problema …"). Isso é feito por [ReclassificacaoService](src/main/java/br/com/hospital/notificacao/service/ReclassificacaoService.java).
+
+### Lista, filtros e detalhes
+
+- **Notificações** ([ListaComposer](src/main/java/br/com/hospital/notificacao/web/ListaComposer.java)) tem chips de status, busca livre e **Filtros avançados**: tipo → problema, classificação, risco, setor, **paciente (prontuário)**, período de recebimento e ordenação (mais recentes, maior risco, problema, classificação mais grave). Todos os filtros são resolvidos em SQL (`NotificacaoDAO.montarWhere`).
+- **Detalhes** (`/admin/detalhe.zul?id=`, [DetalheComposer](src/main/java/br/com/hospital/notificacao/web/DetalheComposer.java)) mostra tudo o que foi registrado: classificação, dados do incidente e campos do tipo, descrição original e revisada, anexos, investigação, plano de ação e histórico. Dados de contato do notificante nunca são exibidos.
+
+### Exportação em PDF
+
+O [ExportacaoServlet](src/main/java/br/com/hospital/notificacao/web/ExportacaoServlet.java) exige sessão administrativa e gera documentos com
+[openhtmltopdf](https://github.com/danfickle/openhtmltopdf) ([RelatorioNotificacaoService](src/main/java/br/com/hospital/notificacao/service/RelatorioNotificacaoService.java)):
+
+- `/export/notificacao/{id}.pdf`: uma notificação, a partir do botão "Exportar PDF" em Detalhes ou no Plano de ação.
+- `/export/notificacoes.pdf?{filtro}`: o resultado filtrado da lista, com uma notificação por página e limite de 200 por arquivo.
+
+Por LGPD, o PDF não inclui e-mail, telefone nem senha, apenas se a notificação é anônima.
 
 ### Anonimato
 
@@ -81,7 +118,7 @@ hash + salt (SHA-256) — nunca em texto puro; ela só aparece uma vez, na tela 
 | Tabela | Papel |
 |---|---|
 | `USUARIO` | Login administrativo (hash + salt + perfil) |
-| `NOTIFICACAO` | Cabeçalho da notificação (status, risco, anonimato) |
+| `NOTIFICACAO` | Cabeçalho da notificação (status, problema/subgrupo, classificação, risco, descrição original e revisada, anonimato) |
 | `NOTIFICACAO_CAMPO` | Campos dinâmicos por tipo (produto/lote, medicamento/via, ...) |
 | `NOTIFICACAO_ANEXO` | Metadados dos arquivos anexados |
 | `NOTIFICACAO_HISTORICO` | Trilha cronológica de mudança de status |
@@ -170,15 +207,43 @@ docker compose up --build
   depois do banco pronto — a criação da instância DB2 é lenta na primeira vez, e ainda
   mais lenta em máquinas com pouca RAM livre (o processo passa a depender de swap).
 
-### Rodando os testes sem Docker
+### Testes
 
-As regras de negócio puras (matriz de risco, protocolo, hash de senha) têm testes
-JUnit que não dependem do DB2. Para rodar só esses, sem subir o Compose inteiro:
+Os testes não dependem de Docker nem de DB2:
 
 ```bash
 ./mvnw test        # Linux/macOS
 .\mvnw.cmd test    # Windows
 ```
+
+A suíte tem duas camadas:
+
+- **Unitários (`*Test`)**: regras puras, como matriz de risco, protocolo, hash de senha, montagem do
+  `WHERE` dos filtros, mensagens de reclassificação, HTML/PDF do relatório e conversão do filtro em URL.
+- **Integração (`*IT`)**: sobem o schema real (`SchemaInitializer`) num **H2 em memória no modo DB2**
+  e exercitam DAOs, services e servlets com SQL de verdade. Cobrem:
+
+  | Classe | O que cobre |
+  |---|---|
+  | `NotificacaoServiceIT` | Abertura de notificações nos 5 canais, anonimato, senha só em hash, anexos e rollback, acompanhamento |
+  | `ListagemFiltrosIT` | Filtros da lista, ordenação, paginação, duplicatas e contadores |
+  | `ReclassificacaoIT` | Reclassificação, preservação da descrição original e histórico |
+  | `FluxoCompletoIT` | Fluxo completo, de Aberto a Concluído |
+  | `AutenticacaoIT` | Login e seed de usuários |
+  | `SchemaInitializerIT` | Migração de dados |
+  | `ServletsIT` | Exportação PDF, download de anexo e QR Codes, incluindo bloqueio sem login e ausência de contato no PDF |
+
+O H2 cobre a lógica e o SQL comum, mas não reproduz 100% o DB2. Para rodar **a mesma suíte
+contra um DB2 real** (ex.: o do Compose), use um banco **de teste**, porque cada teste apaga
+as tabelas:
+
+```bash
+./mvnw test -Dnsp.teste.jdbcUrl=jdbc:db2://localhost:50000/HOSPITAL \
+  -Dnsp.teste.usuario=db2inst1 -Dnsp.teste.senha=SUA_SENHA -Dnsp.teste.apagarDados=true
+```
+
+Nesse modo também roda o teste de idempotência do `SchemaInitializer` (executar o DDL duas
+vezes), que só faz sentido no DB2.
 
 O projeto usa o Maven Wrapper (`.mvn/`, `mvnw`, `mvnw.cmd`) — não é preciso ter o
 Maven instalado, o wrapper baixa a versão fixada (3.9.16) na primeira execução.
@@ -195,12 +260,23 @@ Maven instalado, o wrapper baixa a versão fixada (3.9.16) na primeira execuçã
    → **Plano de ação** (marcar ações como Concluídas) → **Concluir notificação**.
 4. Repetir o passo 1 com o mesmo número de prontuário duas vezes → conferir o destaque de
    duplicata em **Notificações**.
+5. Na Tecnovigilância, tentar avançar o passo 2 sem Registro ANVISA ou sem o tipo de
+   produto → o wizard deve bloquear.
+6. **Notificações → Filtros avançados**: filtrar por prontuário, tipo → problema,
+   classificação, risco e período; ordenar por "Maior risco".
+7. Na **Triagem**, reclassificar o tipo (ex.: Tecnovigilância → Farmacovigilância) e
+   escrever uma descrição revisada → em **Detalhes**, conferir a descrição original intacta
+   e a mudança registrada no histórico.
+8. **Exportar PDF** em Detalhes e na lista filtrada → conferir o conteúdo e a ausência de
+   dados de contato.
 
 ## Pontos de atenção / limitações conhecidas da V1
 
-- Sem testes de integração com DB2 (só regras de negócio puras em JUnit); ver `ROADMAP-V2.md`.
+- Os testes de integração rodam em H2 (modo DB2) por padrão; contra o DB2 real só quando apontados explicitamente (ver "Testes").
 - Sem troca de senha pela UI administrativa.
-- Sem Indicadores & BI, exportação `.xlsx`/`.pdf` e integração com Google Sheets/ANVISA — classificados como baixa prioridade/opcional nos critérios de aceitação, documentados em `ROADMAP-V2.md`.
+- Sem Indicadores & BI, exportação `.xlsx` e integração com Google Sheets/ANVISA. Estão classificados como baixa prioridade/opcional nos critérios de aceitação e documentados em `ROADMAP-V2.md`. A exportação em PDF das notificações já existe (ver "Exportação em PDF").
+- Ao trocar o tipo de uma notificação na reclassificação, o protocolo mantém o prefixo original (ex.: `#TC-…` passa a ser Farmacovigilância), e os campos dinâmicos do tipo antigo continuam como foram preenchidos. Isso é intencional, para não invalidar o protocolo que o notificante guardou.
+- Notificações de Tecnovigilância e Farmacovigilância abertas antes desta versão ficam sem problema (subgrupo). A Triagem pede que ele seja definido antes de iniciar a investigação.
 - Data/hora do incidente são campos de texto livre (`dd/mm/aaaa`), não um seletor de calendário — simplificação deliberada para manter o formulário rápido em celular.
 - `javax.servlet-api` (Java EE, não Jakarta EE) — relevante para qualquer upgrade futuro de Tomcat.
 - Há uma pasta `graphify-out/` na raiz com um grafo de conhecimento do repositório, não faz parte do build.

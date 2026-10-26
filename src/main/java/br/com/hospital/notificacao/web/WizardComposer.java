@@ -1,6 +1,8 @@
 package br.com.hospital.notificacao.web;
 
 import br.com.hospital.notificacao.model.CampoDinamicoDef;
+import br.com.hospital.notificacao.model.ClassificacaoIncidente;
+import br.com.hospital.notificacao.model.Setores;
 import br.com.hospital.notificacao.model.TipoNotificacao;
 import br.com.hospital.notificacao.service.AnexoService;
 import br.com.hospital.notificacao.service.AnexoUpload;
@@ -66,6 +68,7 @@ public class WizardComposer extends SelectorComposer<Component> {
     private final AnexoService anexoService = new AnexoService();
 
     private TipoNotificacao tipo;
+    private Combobox cboSubgrupo;
     private boolean gerouDano = false;
     private final Map<String, Component> componentesDinamicos = new LinkedHashMap<>();
     private final Map<String, String> valoresToggleDinamico = new LinkedHashMap<>();
@@ -85,10 +88,29 @@ public class WizardComposer extends SelectorComposer<Component> {
         shell.setSclass("nsp-phone " + tipo.getClasseCss());
         lblSubPasso2.setValue(tipo.getCodigoFormulario() + " · " + tipo.getTitulo());
         btnDanoNao.setSclass("sel-on-toggle");
+        preencherCombo(cboSetor, Setores.TODOS);
+        preencherCombo(cboGravidade, ClassificacaoIncidente.TODAS);
+
+        // Subgrupo (o "problema" dentro do tipo): obrigatorio, usado nos filtros e na reclassificacao.
+        Label rotuloSubgrupo = new Label(tipo.getRotuloSubgrupo() + " *");
+        rotuloSubgrupo.setSclass("nsp-field-label");
+        rotuloSubgrupo.setStyle("margin-top:10px;display:block");
+        camposDinamicos.appendChild(rotuloSubgrupo);
+        cboSubgrupo = new Combobox();
+        cboSubgrupo.setReadonly(true);
+        cboSubgrupo.setWidth("100%");
+        preencherCombo(cboSubgrupo, tipo.getSubgrupos());
+        camposDinamicos.appendChild(cboSubgrupo);
 
         for (CampoDinamicoDef def : tipo.getCamposDinamicos()) {
             camposDinamicos.appendChild(construirRotulo(def));
             camposDinamicos.appendChild(construirCampo(def));
+        }
+    }
+
+    private void preencherCombo(Combobox cb, List<String> opcoes) {
+        for (String opcao : opcoes) {
+            cb.appendChild(new Comboitem(opcao));
         }
     }
 
@@ -194,6 +216,10 @@ public class WizardComposer extends SelectorComposer<Component> {
             Clients.wrongValue(cboSetor, "Selecione o setor / unidade");
             return;
         }
+        if (cboSubgrupo.getSelectedItem() == null) {
+            Clients.wrongValue(cboSubgrupo, "Selecione: " + tipo.getRotuloSubgrupo());
+            return;
+        }
         if (cboGravidade.getSelectedItem() == null) {
             Clients.wrongValue(cboGravidade, "Selecione a pré-classificação da gravidade");
             return;
@@ -264,6 +290,7 @@ public class WizardComposer extends SelectorComposer<Component> {
         req.setHoraIncidente(txtHora.getValue());
         req.setSetor(cboSetor.getSelectedItem().getLabel());
         req.setProntuario(txtProntuario.getValue());
+        req.setSubgrupo(cboSubgrupo.getSelectedItem().getLabel());
         req.setGravidade(cboGravidade.getSelectedItem().getLabel());
         req.setGerouDano(gerouDano);
         req.setDescricao(txtDescricao.getValue());

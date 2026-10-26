@@ -34,10 +34,13 @@ o que o torna um módulo relativamente independente do núcleo de notificação/
 - Reaproveitar `barChart()`/distribuição por tipo já implementado em `PainelComposer`
   como base visual.
 
-## 2. Exportação `.xlsx` / `.pdf`
+## 2. Exportação `.xlsx` (o PDF já está feito)
 
-**O que é**: exportar a lista de notificações e os indicadores para planilhas do hospital
-e relatórios em PDF para ANVISA/Sentinela.
+**Status**: a exportação em **PDF** das notificações já existe (`ExportacaoServlet` +
+`RelatorioNotificacaoService`, com openhtmltopdf). Ela gera uma notificação ou o resultado filtrado da
+lista (ver README, "Exportação em PDF"). Falta o `.xlsx` para as planilhas de indicadores.
+
+**O que é**: exportar a lista de notificações e os indicadores para planilhas do hospital.
 
 **Como implementar**:
 - Adicionar `org.apache.poi:poi-ooxml` (Excel) ao `pom.xml`.
@@ -47,9 +50,9 @@ e relatórios em PDF para ANVISA/Sentinela.
 - Para PDF: `org.apache.pdfbox:pdfbox` ou renderizar um HTML simples e converter
   (`openhtmltopdf`). Escopo menor: começar só pelo `.xlsx`, que já resolve o critério de
   "alimentar as planilhas de indicadores do hospital".
-- Os botões "Exportar (.xlsx)" já existem como *stub* (toast informativo) em
-  `ListaComposer` e `PlanoComposer` — trocar o `Clients.showNotification(...)` pela
-  chamada real ao `ExportacaoService`.
+- Reaproveitar o padrão já usado no PDF: `FiltroParametros` converte o filtro da lista em
+  query string, e o `ExportacaoServlet` (rota `/export/*`, sessão obrigatória) pode ganhar
+  uma rota `/export/notificacoes.xlsx`.
 
 ## 3. Integração com Google Sheets / envio à ANVISA
 
@@ -90,19 +93,18 @@ para criar, desativar ou trocar senha de usuários do NSP.
   `listarTodos`, `atualizarSenha`, `atualizarStatusAtivo`).
 - Troca de senha usa o mesmo `HashSenha` já implementado.
 
-## 6. Testes de integração com DB2
+## 6. Testes de integração no DB2 automatizados (CI)
 
-**O que é**: a V1 só tem testes JUnit de regra pura (`MatrizRisco`, `ProtocoloService`,
-`HashSenha`) — sem testes que batem no banco de verdade.
+**Status**: a suíte de integração (`*IT`) já existe e cobre o fluxo completo, os filtros,
+a reclassificação, a autenticação, a migração de dados e os servlets. Por padrão ela roda em
+H2 (modo DB2), e roda contra um DB2 real quando recebe `-Dnsp.teste.jdbcUrl=...` (ver README,
+"Testes"). Falta rodá-la **automaticamente** contra o DB2.
 
 **Como implementar**:
-- Adicionar `org.testcontainers:testcontainers` + um container DB2 de teste (mesma
-  imagem do `docker-compose.yml`) ou um `Db2ContainerTest` usando a imagem
-  `icr.io/db2_community/db2`.
-- Testar especificamente: `SchemaInitializer.executar()` duas vezes seguidas (idempotência),
-  `NotificacaoDAO.listar()` com os filtros de duplicata, e o fluxo completo
-  `NotificacaoService.criar()` → `TriagemService.aplicarClassificacao()` →
-  `InvestigacaoService.gerarPlanoDeAcao()` → `PlanoAcaoService.concluirNotificacao()`.
+- Adicionar `org.testcontainers:db2` e, no `IntegracaoBase`, subir um container
+  `icr.io/db2_community/db2` quando um profile Maven (ex.: `-Pdb2`) estiver ativo, passando
+  a URL do container para `DataSourceFactory.inicializar(url, usuario, senha)`.
+- Rodar esse profile num job de CI separado, porque a criação da instância DB2 leva minutos.
 
 ## 7. Trilha LGPD mais completa
 

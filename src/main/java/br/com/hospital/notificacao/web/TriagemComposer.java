@@ -10,17 +10,15 @@ import br.com.hospital.notificacao.service.NotificacaoService;
 import br.com.hospital.notificacao.service.TriagemService;
 import org.zkoss.zk.ui.Executions;
 import org.zkoss.zk.ui.util.Clients;
-import org.zkoss.zul.Combobox;
-import org.zkoss.zul.Comboitem;
 import org.zkoss.zul.Div;
 import org.zkoss.zul.Label;
 
 import java.util.Optional;
 
 /**
- * Triagem &amp; classificação (Item 3): pré-visualização dos detalhes da notificação antes
- * da triagem formal (ajuste pedido pelo cliente na ata de validação), matriz de risco
- * Probabilidade x Impacto e avanço para investigação.
+ * Triagem &amp; classificação (Item 3): resumo da notificação com link para os detalhes
+ * completos (ajuste pedido pelo cliente na ata de validação), painel único de
+ * reclassificação, matriz de risco Probabilidade x Impacto e avanço para investigação.
  */
 public class TriagemComposer extends AdminComposer {
 
@@ -82,73 +80,53 @@ public class TriagemComposer extends AdminComposer {
         card.appendChild(titulo);
 
         String anonTexto = notificacao.isAnonimo() ? "Anônimo" : "Contato vinculado";
-        Label meta = new Label(notificacao.getDataIncidente() + " · " + anonTexto + " · " + notificacao.getSetor()
-                + " · pré-classificada como “" + notificacao.getGravidade() + "”");
+        Label meta = new Label(notificacao.getProtocolo() + " · " + notificacao.getDataIncidente() + " · " + anonTexto
+                + " · " + notificacao.getSetor()
+                + " · Problema: " + ouTraco(notificacao.getSubgrupo())
+                + " · Classificação: " + ouTraco(notificacao.getGravidade()));
         meta.setStyle("display:block;font-size:12px;color:var(--muted);margin-bottom:6px");
         card.appendChild(meta);
 
-        Label desc = new Label(notificacao.getDescricao());
+        Label desc = new Label(notificacao.getDescricaoVigente());
         desc.setStyle("display:block;font-size:13px;color:#4a443c;margin-bottom:10px");
         card.appendChild(desc);
 
-        // Pré-visualização dos detalhes completos antes de iniciar a triagem formal.
-        Div detalhes = new Div();
-        detalhes.setStyle("display:none;background:#faf8f4;border-radius:10px;padding:10px 12px;margin-bottom:10px");
-        if (!notificacao.getCampos().isEmpty()) {
-            notificacao.getCampos().forEach(c -> {
-                Label linha = new Label(c.getRotulo() + ": " + c.getValor());
-                linha.setStyle("display:block;font-size:12px;color:#3a352f;margin-bottom:3px");
-                detalhes.appendChild(linha);
-            });
-        }
-        Label anexosInfo = new Label(notificacao.getAnexos().size() + " anexo(s)");
-        anexosInfo.setStyle("display:block;font-size:11.5px;color:var(--muted);margin-top:4px");
-        detalhes.appendChild(anexosInfo);
-
-        Label expandir = new Label("Ver detalhes completos ▾");
-        expandir.setSclass("nsp-linkbtn");
-        expandir.addEventListener("onClick", e -> {
-            boolean visivel = detalhes.getStyle() != null && detalhes.getStyle().contains("display:block");
-            detalhes.setStyle(visivel
-                    ? "display:none;background:#faf8f4;border-radius:10px;padding:10px 12px;margin-bottom:10px"
-                    : "display:block;background:#faf8f4;border-radius:10px;padding:10px 12px;margin-bottom:10px");
-            expandir.setValue(visivel ? "Ver detalhes completos ▾" : "Ocultar detalhes ▴");
-        });
-        card.appendChild(expandir);
+        final long idNotificacao = notificacao.getId();
+        Label detalhes = new Label("Ver detalhes completos (" + notificacao.getCampos().size() + " campo(s) · "
+                + notificacao.getAnexos().size() + " anexo(s)) →");
+        detalhes.setSclass("nsp-linkbtn");
+        detalhes.addEventListener("onClick", e ->
+                Executions.getCurrent().sendRedirect("/admin/detalhe.zul?id=" + idNotificacao));
         card.appendChild(detalhes);
 
+        Div secReclass = new Div();
+        secReclass.setSclass("nsp-sec-title");
+        secReclass.appendChild(new Label("Reclassificação · tipo, problema, classificação e descrição"));
+        card.appendChild(secReclass);
+        card.appendChild(new ReclassificacaoPainel(notificacao, false,
+                () -> Executions.getCurrent().sendRedirect("/admin/triagem.zul?id=" + idNotificacao)));
+
         Div acoes = new Div();
-        acoes.setStyle("display:flex;gap:9px;align-items:center;margin-top:12px;flex-wrap:wrap");
-
-        Combobox reclassificar = new Combobox();
-        reclassificar.setReadonly(true);
-        reclassificar.setWidth("220px");
-        String[] gravidades = {"Near miss (quase erro)", "Incidente sem dano", "Dano leve", "Dano moderado",
-                "Dano grave", "Óbito"};
-        for (String g : gravidades) {
-            Comboitem item = new Comboitem(g);
-            reclassificar.appendChild(item);
-            if (g.equals(notificacao.getGravidade())) reclassificar.setSelectedItem(item);
-        }
-        acoes.appendChild(reclassificar);
-
+        acoes.setStyle("display:flex;gap:9px;align-items:center;margin-top:16px;flex-wrap:wrap");
         Label btnIniciarInvestigacao = new Label("Iniciar investigação →");
-        btnIniciarInvestigacao.setSclass("nsp-linkbtn");
-        btnIniciarInvestigacao.setStyle("background:#dd6f1e;color:#fff;padding:9px 15px;border-radius:9px;font-weight:600;cursor:pointer");
-        final long idNotificacao = notificacao.getId();
+        btnIniciarInvestigacao.setSclass("nsp-btn");
+        btnIniciarInvestigacao.setStyle("background:#dd6f1e;color:#fff;border-color:#dd6f1e");
         btnIniciarInvestigacao.addEventListener("onClick", e -> {
+            // Problema, classificacao e risco precisam estar definidos antes da investigacao.
+            if (isEmpty(notificacao.getSubgrupo()) || isEmpty(notificacao.getGravidade())
+                    || notificacao.getNivelRisco() == null) {
+                Clients.showNotification("Defina e salve o problema, a classificação e o risco antes de iniciar a investigação.",
+                        "error", null, "top_center", 3500);
+                return;
+            }
             Usuario usuario = SessaoUtil.usuarioAtual();
             triagemService.iniciarInvestigacao(idNotificacao, usuario != null ? usuario.getId() : null);
             Executions.getCurrent().sendRedirect("/admin/investigacao.zul?id=" + idNotificacao);
         });
         acoes.appendChild(btnIniciarInvestigacao);
         card.appendChild(acoes);
-
-        this.comboReclassificar = reclassificar;
         return card;
     }
-
-    private Combobox comboReclassificar;
 
     private Div construirPainelMatriz() {
         Div painel = new Div();
@@ -241,10 +219,8 @@ public class TriagemComposer extends AdminComposer {
             Clients.showNotification("Selecione uma célula da matriz antes de aplicar.", "error", null, "top_center", 3000);
             return;
         }
-        String gravidade = comboReclassificar.getSelectedItem() != null
-                ? comboReclassificar.getSelectedItem().getLabel() : notificacao.getGravidade();
         Usuario usuario = SessaoUtil.usuarioAtual();
-        NivelRisco nivel = triagemService.aplicarClassificacao(notificacao.getId(), gravidade, probSelecionada,
+        NivelRisco nivel = triagemService.aplicarClassificacao(notificacao.getId(), notificacao.getGravidade(), probSelecionada,
                 impSelecionado, usuario != null ? usuario.getId() : null);
         String extra = (nivel == NivelRisco.ALTO || nivel == NivelRisco.EXTREMO) ? " · alerta enviado ao parecerista" : "";
         Clients.showNotification("Risco reclassificado: " + nivel.getRotulo() + extra, "info", null, "top_center", 3000);
@@ -253,5 +229,13 @@ public class TriagemComposer extends AdminComposer {
 
     private int intOu(Integer valor, int padrao) {
         return valor != null ? valor : padrao;
+    }
+
+    private boolean isEmpty(String s) {
+        return s == null || s.trim().isEmpty();
+    }
+
+    private String ouTraco(String s) {
+        return isEmpty(s) ? "—" : s;
     }
 }

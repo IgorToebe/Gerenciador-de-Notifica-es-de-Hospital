@@ -69,6 +69,17 @@
     <url-pattern>/anexo/*</url-pattern>
   </servlet-mapping>
 
+  <!-- Exportação em PDF, restrita a usuarios autenticados:
+       /export/notificacao/{id}.pdf e /export/notificacoes.pdf?{filtro da lista} -->
+  <servlet>
+    <servlet-name>exportacaoServlet</servlet-name>
+    <servlet-class>br.com.hospital.notificacao.web.ExportacaoServlet</servlet-class>
+  </servlet>
+  <servlet-mapping>
+    <servlet-name>exportacaoServlet</servlet-name>
+    <url-pattern>/export/*</url-pattern>
+  </servlet-mapping>
+
   <welcome-file-list>
     <welcome-file>index.zul</welcome-file>
   </welcome-file-list>
