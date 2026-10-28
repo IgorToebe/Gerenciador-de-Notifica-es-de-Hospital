@@ -37,7 +37,10 @@ public final class DataSourceFactory {
         if (senha == null) {
             throw new IllegalStateException("Variável de ambiente DB2_PASSWORD não definida");
         }
-        inicializar("jdbc:db2://" + host + ":" + porta + "/" + database, usuario, senha);
+        // IBM Db2 on Cloud exige SSL. Defina DB2_SSL=true (e use a porta SSL da credencial).
+        boolean ssl = "true".equalsIgnoreCase(env("DB2_SSL", "false"));
+        inicializar("jdbc:db2://" + host + ":" + porta + "/" + database
+                + (ssl ? ":sslConnection=true;" : ""), usuario, senha);
     }
 
     /**
@@ -60,6 +63,9 @@ public final class DataSourceFactory {
         config.setConnectionTimeout(15_000);
         config.setConnectionTestQuery("VALUES 1");
         config.setPoolName("nsp-db2-pool");
+        // Nao derruba a aplicacao se o banco estiver indisponivel no boot: o pool
+        // continua tentando em segundo plano (essencial em Code Engine / serverless).
+        config.setInitializationFailTimeout(-1);
 
         dataSource = new HikariDataSource(config);
     }
